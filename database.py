@@ -15,6 +15,7 @@ Base = automap_base()
 Base.prepare(engine, reflect=True)
 
 Order_TM                = Base.classes.order_tm
+OrderActivity_TR        = Base.classes.orderactivity_tr
 HCXProcessSyncStatus_TM = Base.classes.hcxprocesssyncstatus_tm
 User_TM                 = Base.classes.user_tm
 
