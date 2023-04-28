@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
 
 from datetime import datetime
 from database import get_db, Order_TM, OrderActivity_TR

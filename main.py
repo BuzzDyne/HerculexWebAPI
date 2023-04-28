@@ -1,11 +1,15 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import JSONResponse
+from fastapi_jwt_auth import AuthJWT
+from fastapi_jwt_auth.exceptions import AuthJWTException
 from sqlalchemy.orm import Session
+from datetime import timedelta
 from routers import user, order, auth
 from database import get_db
 from database import Order_TM, HCXProcessSyncStatus_TM, User_TM
-from schemas import User
+from pydantic import BaseModel
 
 from _cred import AuthSecret
 
@@ -24,10 +28,26 @@ app.add_middleware(
     allow_methods=["*"], 
     allow_headers=["*"]
 )
-
 app.include_router(user.router)
 app.include_router(order.router)
 app.include_router(auth.router)
+
+#region AuthJWT
+class Settings(BaseModel):
+    authjwt_secret_key: str = AuthSecret["SECRET_KEY"]
+    authjwt_access_token_expires = timedelta(minutes=AuthSecret["ACCESS_TOKEN_EXPIRE_MINUTES"])
+    
+@AuthJWT.load_config
+def get_config():
+    return Settings()
+
+@app.exception_handler(AuthJWTException)
+def authjwt_exception_handler(request: Request, exc: AuthJWTException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.message}
+    )
+#endregion
 
 @app.get("/")
 async def root():

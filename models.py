@@ -1,6 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, DateTime, DECIMAL
-from sqlalchemy.orm import relationship
-
+from sqlalchemy import Column, Integer, String, DateTime, DECIMAL
 from database import Base
 
 class UserTm(Base):

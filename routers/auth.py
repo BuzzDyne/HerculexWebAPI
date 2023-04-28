@@ -1,23 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.encoders import jsonable_encoder
+from fastapi_jwt_auth import AuthJWT
+
 from sqlalchemy.orm import Session
 from datetime import datetime
 import bcrypt
 
 from database import get_db, User_TM, Role_TM
 from schemas import LoginForm, RegisterForm
-import JWT
 
 router = APIRouter(
     tags=['Auth'],
     prefix="/auth"
 )
 
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 @router.post('/signup')
-def signup(payload: RegisterForm = Body(default=None), db: Session = Depends(get_db)):
+def signup(payload: RegisterForm = Body(default=None), Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     # Check if username exists
     user = db.query(User_TM).filter(
         User_TM.username == payload.username
@@ -48,41 +46,45 @@ def signup(payload: RegisterForm = Body(default=None), db: Session = Depends(get
     db.refresh(new_user)
 
     token_payload = {
-        "sub"       : new_user.username,
         "role_id"   : new_user.role_id
     }
 
-    access_token = JWT.create_access_token(data=token_payload)
+    access_token = Authorize.create_access_token(subject=user.username, user_claims=token_payload)
 
     return {"token": access_token, "token-type": "bearer"}
     
-
 @router.post('/login')
-def login(payload: LoginForm, db: Session = Depends(get_db)):
+def login(payload: LoginForm, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     user = authenticate_user(db, payload.username, payload.password)
 
     token_payload = {
-        "username"  : user.username,
         "role_id"   : user.role_id
     }
 
-    access_token = JWT.create_access_token(data=token_payload)
+    access_token  = Authorize.create_access_token(subject=user.username, user_claims=token_payload)
+    refresh_token = Authorize.create_refresh_token(subject=user.username)
 
-    return {"token": access_token, "token-type": "bearer"}
+    return {"access_token": access_token, "refresh_token": refresh_token}
 
-@router.post('/loginv2')
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = authenticate_user(db, form_data.username, form_data.password)
-    
-    token_payload = {
-        "username"  : user.username,
-        "role_id"   : user.role_id
-    }
+@router.post('/refresh')
+def refresh(Authorize: AuthJWT = Depends()):
+    Authorize.jwt_refresh_token_required()
 
-    access_token = JWT.create_access_token(data=token_payload)
+    current_user = Authorize.get_jwt_subject()
+    new_access_token = Authorize.create_access_token(subject=current_user)
+    return {"access_token": new_access_token}
 
-    return {"token": access_token, "token-type": "bearer"}
+@router.get('/protected')
+def protected(Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
+    Authorize.jwt_required()
 
+    current_username = Authorize.get_jwt_subject()
+
+    user = db.query(User_TM).filter(
+        User_TM.username == current_username
+    ).first()
+
+    return user
 
 def authenticate_user(db: Session, username, pwd):
     user = db.query(User_TM).filter(
