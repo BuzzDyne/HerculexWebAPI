@@ -18,6 +18,7 @@ Order_TM                = Base.classes.order_tm
 OrderActivity_TR        = Base.classes.orderactivity_tr
 HCXProcessSyncStatus_TM = Base.classes.hcxprocesssyncstatus_tm
 User_TM                 = Base.classes.user_tm
+Role_TM                 = Base.classes.role_tm
 
 def get_db():
         db = SessionLocal()

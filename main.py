@@ -1,10 +1,15 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from routers import user, order
+from routers import user, order, auth
 from database import get_db
 from database import Order_TM, HCXProcessSyncStatus_TM, User_TM
 from schemas import User
+
+from _cred import AuthSecret
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
 
@@ -22,6 +27,7 @@ app.add_middleware(
 
 app.include_router(user.router)
 app.include_router(order.router)
+app.include_router(auth.router)
 
 @app.get("/")
 async def root():

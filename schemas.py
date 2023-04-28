@@ -96,3 +96,14 @@ class GlobalLogging(BaseModel):
 
     class Config:
         orm_mode = True
+
+# Login Form
+class LoginForm(BaseModel):
+    username: str
+    password: str
+
+# Register Form
+class RegisterForm(BaseModel):
+    username: str
+    password: str
+    rolename: str

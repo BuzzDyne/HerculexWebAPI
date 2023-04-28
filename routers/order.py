@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 
 from datetime import datetime
 from database import get_db, Order_TM, OrderActivity_TR
@@ -20,6 +21,11 @@ def get_all_order(db: Session = Depends(get_db)):
 @router.get('/get_all')
 def get_all_order(db: Session = Depends(get_db)):
     res = db.query(Order_TM).all()
+    return res
+
+@router.get('/get_top_5')
+def get_top_5_order(db: Session = Depends(get_db)):
+    res = db.query(Order_TM).order_by(Order_TM.id.desc()).limit(5).all()
     return res
 
 @router.get('/{id}/activity')
