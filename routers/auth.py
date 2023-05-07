@@ -45,13 +45,7 @@ def signup(payload: RegisterForm = Body(default=None), Authorize: AuthJWT = Depe
     db.commit()
     db.refresh(new_user)
 
-    token_payload = {
-        "role_id"   : new_user.role_id
-    }
-
-    access_token = Authorize.create_access_token(subject=user.username, user_claims=token_payload)
-
-    return {"token": access_token, "token-type": "bearer"}
+    return {"msg": f"Created user '{payload.username}'"}
     
 @router.post('/login')
 def login(payload: LoginForm, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
