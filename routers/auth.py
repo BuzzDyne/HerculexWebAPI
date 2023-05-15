@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Body
 from fastapi_jwt_auth import AuthJWT
 
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timedelta
 import bcrypt
 
 from database import get_db, User_TM, Role_TM
@@ -13,6 +13,8 @@ router = APIRouter(
     prefix="/auth"
 )
 
+ACCESS_TOKEN_EXP = timedelta(minutes=1)
+REFRESH_TOKEN_EXP= timedelta(days=7)
 
 @router.post('/signup')
 def signup(payload: RegisterForm = Body(default=None), Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
@@ -55,17 +57,17 @@ def login(payload: LoginForm, Authorize: AuthJWT = Depends(), db: Session = Depe
         "role_id"   : user.role_id
     }
 
-    access_token  = Authorize.create_access_token(subject=user.username, user_claims=token_payload)
-    refresh_token = Authorize.create_refresh_token(subject=user.username)
+    access_token  = Authorize.create_access_token(subject=user.username, user_claims=token_payload, expires_time=ACCESS_TOKEN_EXP)
+    refresh_token = Authorize.create_refresh_token(subject=user.username, expires_time=REFRESH_TOKEN_EXP)
 
     return {"access_token": access_token, "refresh_token": refresh_token}
 
-@router.post('/refresh')
+@router.get('/refresh')
 def refresh(Authorize: AuthJWT = Depends()):
     Authorize.jwt_refresh_token_required()
 
     current_user = Authorize.get_jwt_subject()
-    new_access_token = Authorize.create_access_token(subject=current_user)
+    new_access_token = Authorize.create_access_token(subject=current_user, expires_time=ACCESS_TOKEN_EXP)
     return {"access_token": new_access_token}
 
 @router.get('/protected')

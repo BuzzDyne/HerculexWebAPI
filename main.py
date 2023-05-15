@@ -6,7 +6,7 @@ from fastapi_jwt_auth import AuthJWT
 from fastapi_jwt_auth.exceptions import AuthJWTException
 from sqlalchemy.orm import Session
 from datetime import timedelta
-from routers import user, order, auth
+from routers import user, order, auth, api_user
 from database import get_db
 from database import Order_TM, HCXProcessSyncStatus_TM, User_TM
 from pydantic import BaseModel
@@ -34,6 +34,7 @@ app.add_middleware(
 app.include_router(user.router)
 app.include_router(order.router)
 app.include_router(auth.router)
+app.include_router(api_user.router)
 
 #region AuthJWT
 class Settings(BaseModel):
