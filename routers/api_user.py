@@ -36,3 +36,17 @@ def get_list(Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     ]
 
     return user_list
+
+@router.delete('/id/{id}')
+def delete_user_by_id(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
+    Authorize.jwt_required()
+
+    query_res = db.query(User_TM).filter(User_TM.id == id)
+
+    if not query_res.first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='ID not found')
+
+    query_res.delete()
+    db.commit()
+
+    return {'details': 'Deleted User of ID ' + id}
