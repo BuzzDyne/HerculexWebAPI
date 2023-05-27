@@ -107,3 +107,8 @@ class RegisterForm(BaseModel):
     username: str
     password: str
     rolename: str
+
+# Register Form
+class EditUserForm(BaseModel):
+    rolename: str
+    password: str

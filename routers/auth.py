@@ -13,7 +13,7 @@ router = APIRouter(
     prefix="/auth"
 )
 
-ACCESS_TOKEN_EXP = timedelta(minutes=1)
+ACCESS_TOKEN_EXP = timedelta(minutes=60)
 REFRESH_TOKEN_EXP= timedelta(days=7)
 
 @router.post('/signup')
@@ -32,7 +32,7 @@ def signup(payload: RegisterForm = Body(default=None), Authorize: AuthJWT = Depe
     ).first()
 
     if not role:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Role '{payload.username}' not found!")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Role '{payload.rolename}' not found!")
 
 
     # Add user to DB
@@ -56,6 +56,10 @@ def login(payload: LoginForm, Authorize: AuthJWT = Depends(), db: Session = Depe
     token_payload = {
         "role_id"   : user.role_id
     }
+
+    user.last_login_dt = datetime.now()
+    db.commit()
+    db.refresh(user)
 
     access_token  = Authorize.create_access_token(subject=user.username, user_claims=token_payload, expires_time=ACCESS_TOKEN_EXP)
     refresh_token = Authorize.create_refresh_token(subject=user.username, expires_time=REFRESH_TOKEN_EXP)
