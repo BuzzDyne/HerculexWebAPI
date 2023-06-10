@@ -22,17 +22,6 @@ def get_active_orders(db: Session = Depends(get_db)):
 @router.get('/id/{id}')
 def get_order_details(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     Authorize.jwt_required()
-
-    res = db.query(Order_TM).filter(Order_TM.id == id).first()
-
-    if not res:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='ID not found')
-
-    return res
-
-@router.get('/ids/{id}')
-def get_order_details(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
-    Authorize.jwt_required()
     query = db.query(Order_TM, OrderItem_TR).\
         join(OrderItem_TR, Order_TM.ecom_order_id == OrderItem_TR.ecom_order_id).\
         filter(Order_TM.id == id).all()
