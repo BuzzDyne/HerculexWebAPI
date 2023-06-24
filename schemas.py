@@ -112,3 +112,15 @@ class RegisterForm(BaseModel):
 class EditUserForm(BaseModel):
     rolename: str
     password: str
+
+# Order Update Form
+class OrderUpdate(BaseModel):
+    initial_input_dt: Optional[str]
+    cust_phone_no   : Optional[str]
+    user_deadline_dt: Optional[str]
+    design_acc_dt   : Optional[str]
+    folder_url      : Optional[str]
+    thumb_url       : Optional[str]
+    print_done_dt   : Optional[str]
+    packing_done_dt : Optional[str]
+
