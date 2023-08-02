@@ -23,6 +23,7 @@ class Order(BaseModel):
     last_updated_ts: Optional[str]
     user_deadline_dt: Optional[str]
     pltf_deadline_dt: Optional[str]
+    design_sub_dt: Optional[str]
     design_acc_dt: Optional[str]
     print_done_dt: Optional[str]
     buyer_id: Optional[str]
@@ -118,9 +119,18 @@ class OrderUpdate(BaseModel):
     initial_input_dt: Optional[str]
     cust_phone_no   : Optional[str]
     user_deadline_dt: Optional[str]
+    design_sub_dt   : Optional[str]
     design_acc_dt   : Optional[str]
-    folder_url      : Optional[str]
-    thumb_url       : Optional[str]
+    google_folder_url: Optional[str]
+    google_file_url : Optional[str]
     print_done_dt   : Optional[str]
     packing_done_dt : Optional[str]
 
+# Order Submit URL Form
+class OrderSubmitURL(BaseModel):
+    folder_url      : Optional[str]
+    thumb_file_url  : Optional[str]
+
+# Order Submit URL Form
+class OrderUpdateDatePayload(BaseModel):
+    date      : Optional[str]
