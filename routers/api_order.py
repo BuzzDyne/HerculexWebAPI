@@ -1,11 +1,10 @@
 import requests as r
-from fastapi import APIRouter, Depends, HTTPException, requests, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.orm import Session
 from datetime import datetime
-import bcrypt
 
-from database import get_db, Order_TM, OrderItem_TR
+from database import get_db, Order_TM, OrderItem_TR, OrderTracking_TH, User_TM
 from schemas import OrderUpdate, OrderSubmitURL, OrderUpdateDatePayload
 
 router = APIRouter(
@@ -32,10 +31,29 @@ def get_order_details(id: str, Authorize: AuthJWT = Depends(), db: Session = Dep
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='ID not found')
 
     order_tm, order_items = zip(*query)
+    
+    # Query to fetch data from 'ordertracking_th' table based on the 'order_id' column
+    order_tracking_query = db.query(OrderTracking_TH, User_TM.username).\
+        outerjoin(User_TM, OrderTracking_TH.user_id == User_TM.id).\
+        filter(OrderTracking_TH.order_id == id).\
+        order_by(OrderTracking_TH.id.desc()).all()
+
     result = {
         'order_data': order_tm[0],
-        'order_items_data': order_items
+        'order_items_data': order_items,
+        'order_trackings': []
     }
+
+    # Loop through the results and create a list of dictionaries with the required data
+    for tracking, username in order_tracking_query:
+        result['order_trackings'].append({
+            'order_tracking_id' : tracking.id,
+            'order_id'          : tracking.order_id,
+            'activity_date'     : tracking.activity_date,
+            'activity_msg'      : tracking.activity_msg,
+            'user_id'           : tracking.user_id,
+            'user_name'         : username,
+        })
 
     return result
 

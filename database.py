@@ -15,8 +15,8 @@ Base.prepare(engine, reflect=True)
 
 Order_TM                = Base.classes.order_tm
 OrderItem_TR            = Base.classes.orderitem_tr
-OrderActivity_TR        = Base.classes.orderactivity_tr
 HCXProcessSyncStatus_TM = Base.classes.hcxprocesssyncstatus_tm
+OrderTracking_TH        = Base.classes.ordertracking_th
 User_TM                 = Base.classes.user_tm
 Role_TM                 = Base.classes.role_tm
 
