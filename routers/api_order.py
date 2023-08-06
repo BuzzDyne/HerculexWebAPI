@@ -76,6 +76,16 @@ def update_order(id: str, data: OrderUpdate, Authorize: AuthJWT = Depends(), db:
     db.commit()
     db.refresh(order)
 
+    # Insert a new row in ordertracking_th
+    new_order_tracking = OrderTracking_TH(
+        order_id    = order.id,
+        activity_msg= f"Updated Customer Phone Number to ({order.cust_phone_no}) and Deadline Date to ({order.user_deadline_dt})",
+        user_id     = data.user_id
+    )
+
+    db.add(new_order_tracking)
+    db.commit()
+
     return {"msg": f"Update successful"}
 
 @router.patch('/id/{id}/submit_url')
@@ -94,6 +104,16 @@ def update_order(id: str, data: OrderSubmitURL, Authorize: AuthJWT = Depends(), 
     db.commit()
     db.refresh(order)
 
+    # Insert a new row in ordertracking_th
+    new_order_tracking = OrderTracking_TH(
+        order_id    = order.id,
+        activity_msg= f"Updated Design URL to ({order.google_folder_url}) and Thumbnail URL to ({order.google_file_url})",
+        user_id     = data.user_id
+    )
+
+    db.add(new_order_tracking)
+    db.commit()
+
     return {"msg": f"Update successful"}
 
 @router.patch('/id/{id}/submit_design_acc')
@@ -107,6 +127,15 @@ def update_order_design_acc(id: str, data: OrderUpdateDatePayload, Authorize: Au
     db.commit()
     db.refresh(order)
 
+    # Insert a new row in ordertracking_th
+    new_order_tracking = OrderTracking_TH(
+        order_id    = order.id,
+        activity_msg= f"Approved Design URLs",
+        user_id     = data.user_id
+    )
+
+    db.add(new_order_tracking)
+    db.commit()
     return {"msg": f"Update successful"}
 
 @router.patch('/id/{id}/submit_print_done')
@@ -120,6 +149,16 @@ def update_order_print_done(id: str, data: OrderUpdateDatePayload, Authorize: Au
     db.commit()
     db.refresh(order)
 
+    # Insert a new row in ordertracking_th
+    new_order_tracking = OrderTracking_TH(
+        order_id    = order.id,
+        activity_msg= f"Printing Process Done",
+        user_id     = data.user_id
+    )
+
+    db.add(new_order_tracking)
+    db.commit()
+
     return {"msg": f"Update successful"}
 
 @router.patch('/id/{id}/submit_packing_done')
@@ -132,6 +171,16 @@ def update_order_packing_done(id: str, data: OrderUpdateDatePayload, Authorize: 
 
     db.commit()
     db.refresh(order)
+
+    # Insert a new row in ordertracking_th
+    new_order_tracking = OrderTracking_TH(
+        order_id    = order.id,
+        activity_msg= f"Packing Process Done",
+        user_id     = data.user_id
+    )
+
+    db.add(new_order_tracking)
+    db.commit()
 
     return {"msg": f"Update successful"}
 

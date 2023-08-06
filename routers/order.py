@@ -4,19 +4,13 @@ from sqlalchemy.orm import Session
 from sqlalchemy.sql.expression import func
 
 from datetime import datetime
-from database import get_db, Order_TM, OrderActivity_TR
+from database import get_db, Order_TM
 from schemas import Order, OrderActivity
 
 router = APIRouter(
     tags=['Order'],
     prefix="/order"
 )
-
-
-@router.get('/get_all_activities')
-def get_all_order(db: Session = Depends(get_db)):
-    res = db.query(OrderActivity_TR).all()
-    return res
 
 @router.get('/get_all')
 def get_all_order(db: Session = Depends(get_db)):
@@ -31,27 +25,6 @@ def get_top_5_order(db: Session = Depends(get_db)):
 @router.get("/random_5_rows")
 def read_random_5_rows(db: Session = Depends(get_db)):
     return db.query(Order_TM).order_by(func.random()).limit(5).all()
-
-@router.get('/{id}/activity')
-def get_all_orderactivities_by_orderid(id: str, db: Session = Depends(get_db)):
-    res = db.query(OrderActivity_TR).filter(OrderActivity_TR.order_id == id).order_by(OrderActivity_TR.id.asc()).all()
-    return res
-
-
-@router.post('/{id}/activity')
-def create_order_activity(id: str, payload: OrderActivity, db: Session = Depends(get_db)):
-    newAct = OrderActivity_TR(
-        order_id    = id,
-        creator_id  = payload.creator_id,
-        message     = payload.message,
-        created_dt  = datetime.now()
-    )
-
-    db.add(newAct)
-    db.commit()
-    db.refresh(newAct)
-
-    return newAct
 
 @router.get('/{id}')
 def get_order_by_id(id: str,  db: Session = Depends(get_db)):

@@ -54,7 +54,8 @@ def login(payload: LoginForm, Authorize: AuthJWT = Depends(), db: Session = Depe
     user = authenticate_user(db, payload.username, payload.password)
 
     token_payload = {
-        "role_id"   : user.role_id
+        "role_id"   : user.role_id,
+        "user_id"   : user.id
     }
 
     user.last_login_dt = datetime.now()

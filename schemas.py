@@ -125,12 +125,15 @@ class OrderUpdate(BaseModel):
     google_file_url : Optional[str]
     print_done_dt   : Optional[str]
     packing_done_dt : Optional[str]
+    user_id         : Optional[int]
 
 # Order Submit URL Form
 class OrderSubmitURL(BaseModel):
     folder_url      : Optional[str]
     thumb_file_url  : Optional[str]
+    user_id         : Optional[int]
 
 # Order Submit URL Form
 class OrderUpdateDatePayload(BaseModel):
+    user_id   : Optional[int]
     date      : Optional[str]
