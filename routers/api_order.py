@@ -12,7 +12,6 @@ router = APIRouter(
     prefix="/api_order"
 )
 
-
 @router.get('/get_active_orders')
 def get_active_orders(db: Session = Depends(get_db)):
     ecom_status_order_values = [100, 103, 220, 221, 400, 450, 500, 501, 530, 540, 600, 601, 690]
@@ -65,7 +64,7 @@ def update_order(id: str, data: OrderUpdate, Authorize: AuthJWT = Depends(), db:
 
     order.initial_input_dt  = data.initial_input_dt   if data.initial_input_dt   else datetime.now()
     order.cust_phone_no     = data.cust_phone_no      if data.cust_phone_no      else order.cust_phone_no      
-    order.user_deadline_dt  = data.user_deadline_dt   if data.user_deadline_dt   else order.user_deadline_dt   
+    order.user_deadline_prd = data.user_deadline_prd  if data.user_deadline_prd  else order.user_deadline_prd   
     order.design_sub_dt     = data.design_sub_dt      if data.design_sub_dt      else order.design_sub_dt      
     order.design_acc_dt     = data.design_acc_dt      if data.design_acc_dt      else order.design_acc_dt      
     order.google_folder_url = data.google_folder_url  if data.google_folder_url  else order.google_folder_url         
@@ -76,10 +75,13 @@ def update_order(id: str, data: OrderUpdate, Authorize: AuthJWT = Depends(), db:
     db.commit()
     db.refresh(order)
 
-    # Insert a new row in ordertracking_th
+    # Format the date string as "YYYY-MM-DD"
+    formatted_date_str = f"{order.user_deadline_prd[:4]}-{order.user_deadline_prd[4:6]}-{order.user_deadline_prd[6:]}"
+
+
     new_order_tracking = OrderTracking_TH(
         order_id    = order.id,
-        activity_msg= f"Updated Customer Phone Number to ({order.cust_phone_no}) and Deadline Date to ({order.user_deadline_dt})",
+        activity_msg= f"Updated Customer Phone Number to ({order.cust_phone_no}) and Deadline Date to ({formatted_date_str})",
         user_id     = data.user_id
     )
 

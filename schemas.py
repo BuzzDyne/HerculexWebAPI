@@ -21,7 +21,7 @@ class Order(BaseModel):
     cust_phone_no: Optional[str]
     feeding_dt: Optional[str]
     last_updated_ts: Optional[str]
-    user_deadline_dt: Optional[str]
+    user_deadline_prd: Optional[str]
     pltf_deadline_dt: Optional[str]
     design_sub_dt: Optional[str]
     design_acc_dt: Optional[str]
@@ -118,7 +118,7 @@ class EditUserForm(BaseModel):
 class OrderUpdate(BaseModel):
     initial_input_dt: Optional[str]
     cust_phone_no   : Optional[str]
-    user_deadline_dt: Optional[str]
+    user_deadline_prd: Optional[str]
     design_sub_dt   : Optional[str]
     design_acc_dt   : Optional[str]
     google_folder_url: Optional[str]
