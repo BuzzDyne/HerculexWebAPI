@@ -19,6 +19,41 @@ def get_active_orders(db: Session = Depends(get_db)):
         Order_TM.ecom_order_status.in_(ecom_status_order_values)).order_by(Order_TM.pltf_deadline_dt.asc()).all()
     return res
 
+@router.get('/get_designer_tasks')
+def get_designer_tasks(db: Session = Depends(get_db)):
+    ecom_status_order_values = [200, 400]
+    res = db.query(Order_TM).filter(
+        Order_TM.ecom_order_status.in_(ecom_status_order_values),
+        Order_TM.design_acc_dt.is_(None),
+        Order_TM.initial_input_dt.isnot(None)
+    ).order_by(Order_TM.user_deadline_prd.asc()).all()
+    return res
+
+@router.get('/get_printer_tasks')
+def get_printer_tasks(db: Session = Depends(get_db)):
+    ecom_status_order_value = 400
+    res = db.query(Order_TM).filter(
+        Order_TM.ecom_order_status == ecom_status_order_value,
+        Order_TM.initial_input_dt.isnot(None),
+        Order_TM.design_acc_dt.isnot(None),
+        Order_TM.design_sub_dt.isnot(None),
+        Order_TM.print_done_dt.is_(None)
+    ).order_by(Order_TM.user_deadline_prd.asc()).all()
+    return res
+
+@router.get('/get_packer_tasks')
+def get_packer_tasks(db: Session = Depends(get_db)):
+    ecom_status_order_value = 400
+    res = db.query(Order_TM).filter(
+        Order_TM.ecom_order_status == ecom_status_order_value,
+        Order_TM.initial_input_dt.isnot(None),
+        Order_TM.design_acc_dt.isnot(None),
+        Order_TM.design_sub_dt.isnot(None),
+        Order_TM.print_done_dt.isnot(None),
+        Order_TM.packing_done_dt.is_(None)
+    ).order_by(Order_TM.user_deadline_prd.asc()).all()
+    return res
+
 @router.get('/id/{id}')
 def get_order_details(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     Authorize.jwt_required()
