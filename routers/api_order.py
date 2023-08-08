@@ -12,9 +12,14 @@ router = APIRouter(
     prefix="/api_order"
 )
 
-@router.get('/get_active_orders')
+@router.get('/get_all_orders')
 def get_active_orders(db: Session = Depends(get_db)):
-    ecom_status_order_values = [100, 103, 220, 221, 400, 450, 500, 501, 530, 540, 600, 601, 690]
+    res = db.query(Order_TM).order_by(Order_TM.pltf_deadline_dt.asc()).all()
+    return res
+
+@router.get('/get_all_active_orders')
+def get_active_orders(db: Session = Depends(get_db)):
+    ecom_status_order_values = [220, 221, 400, 450]
     res = db.query(Order_TM).filter(
         Order_TM.ecom_order_status.in_(ecom_status_order_values)).order_by(Order_TM.pltf_deadline_dt.asc()).all()
     return res
