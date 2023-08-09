@@ -33,11 +33,14 @@ app.add_middleware(
     allow_methods=["*"], 
     allow_headers=["*"]
 )
-app.include_router(user.router)
-app.include_router(order.router)
-app.include_router(auth.router)
-app.include_router(api_user.router)
-app.include_router(api_order.router)
+
+API_PREFIX = "/api_v1"
+
+app.include_router(user.router, prefix=API_PREFIX)
+app.include_router(order.router, prefix=API_PREFIX)
+app.include_router(auth.router, prefix=API_PREFIX)
+app.include_router(api_user.router, prefix=API_PREFIX)
+app.include_router(api_order.router, prefix=API_PREFIX)
 
 #region AuthJWT
 class Settings(BaseModel):
@@ -56,21 +59,21 @@ def authjwt_exception_handler(request: Request, exc: AuthJWTException):
     )
 #endregion
 
-@app.get("/")
+@app.get(API_PREFIX +"/")
 async def root():
     return {"message": "Hello World"}
 
-@app.get('/orders')
+@app.get(API_PREFIX +'/orders')
 async def get_all_orders(db: Session = Depends(get_db)):
     res = db.query(Order_TM).all()
     return res
 
-@app.get('/users')
+@app.get(API_PREFIX +'/users')
 async def get_all_users(db: Session = Depends(get_db)):
     res = db.query(User_TM).all()
     return res
 
-@app.get('/syncstatus')
+@app.get(API_PREFIX +'/syncstatus')
 async def get_tokopedia_sync_status(db: Session = Depends(get_db)):
     res = db.query(HCXProcessSyncStatus_TM).filter(
         HCXProcessSyncStatus_TM.platform_name == "TOKOPEDIA" 
