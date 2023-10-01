@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 from database import get_db, HCXProcessSyncStatus_TM
 from schemas import OrderUpdate, OrderSubmitURL, OrderUpdateDatePayload
-from static import SHOPEE_SUCCESS_HTML
+from static import SHOPEE_SUCCESS_HTML, SHOPEE_FAILED_SHOPID_WRONG_HTML, SHOPEE_FAILED_GENERAL_ERROR_HTML
 from _cred import ShopeeCred
 
 router = APIRouter(
@@ -24,7 +24,7 @@ def get_shopee_token_url(Authorize: AuthJWT = Depends(), db: Session = Depends(g
     shopeeSync = db.query(HCXProcessSyncStatus_TM).filter(HCXProcessSyncStatus_TM.platform_name == "SHOPEE").first()
 
     if not shopeeSync:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='ShopeeSync Data was not found in DB')
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='ShopeeSync Data was not found in DB', error='asd')
 
     return {
         "platform_name"                 : shopeeSync.platform_name,
@@ -39,30 +39,29 @@ def get_shopee_token_url(Authorize: AuthJWT = Depends()):
 
 @router.get('/shopee/get_access_token')
 def get_access_token(code: str, shop_id: str, db: Session = Depends(get_db)):
-    try:
-        s = ShopeeModule()
+    s = ShopeeModule()
 
-        if shop_id != s.shopId:
-            raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail='ShopID does not match!')
+    if shop_id != s.shopId:
+        # raise HTTPException(status_code=status.HTTP_417_EXPECTATION_FAILED, detail='Wrong Shopee Account was used!')
+        return HTMLResponse(content=SHOPEE_FAILED_SHOPID_WRONG_HTML)
 
-        accessToken, refreshToken = s.get_tokens(code)
+    accessToken, refreshToken = s.get_tokens(code)
 
-        # Update to DB
-        shopeeSync = db.query(HCXProcessSyncStatus_TM).filter(HCXProcessSyncStatus_TM.platform_name == "SHOPEE").first()
+    # Update to DB
+    shopeeSync = db.query(HCXProcessSyncStatus_TM).filter(HCXProcessSyncStatus_TM.platform_name == "SHOPEE").first()
 
-        if not shopeeSync:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='ShopeeSync Data was not found in DB')
+    if not shopeeSync:
+        # raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail='ShopeeSync Data was not found in DB')
+        return HTMLResponse(content=SHOPEE_FAILED_GENERAL_ERROR_HTML)
 
-        shopeeSync.access_token     = accessToken
-        shopeeSync.refresh_token    = refreshToken
-        shopeeSync.refresh_token_expire_YYYYMMDD = (datetime.now() + timedelta(days=30)).strftime("%Y%m%d")
+    shopeeSync.access_token     = accessToken
+    shopeeSync.refresh_token    = refreshToken
+    shopeeSync.refresh_token_expire_YYYYMMDD = (datetime.now() + timedelta(days=30)).strftime("%Y%m%d")
 
-        db.commit()
-        db.refresh(shopeeSync)
+    db.commit()
+    db.refresh(shopeeSync)
 
-        return HTMLResponse(content=SHOPEE_SUCCESS_HTML)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return HTMLResponse(content=SHOPEE_SUCCESS_HTML)
 
 class ShopeeModule:
     def __init__(self):
