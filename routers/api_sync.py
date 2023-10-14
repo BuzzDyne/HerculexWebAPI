@@ -68,10 +68,10 @@ class ShopeeModule:
         self.partnerId  = ShopeeCred['partner_id']
         self.partnerKey = ShopeeCred['partner_key']
         self.shopId     = ShopeeCred['shop_id']
+        self.baseURL    = 'https://partner.shopeemobile.com'
+        # self.baseURL    = 'https://partner.test-stable.shopeemobile.com'
 
     def get_auth_url(self):
-        # url = 'https://partner.shopeemobile.com'
-        url = 'https://partner.test-stable.shopeemobile.com'
         url_path = '/api/v2/shop/auth_partner'
         ts = int(time.time()) + 2
 
@@ -79,7 +79,7 @@ class ShopeeModule:
         sign = hmac.new(self.partnerKey.encode(), base_string, hashlib.sha256).hexdigest()
 
         redirect_url = "http://127.0.0.1:8000/api_v1/api_sync/shopee/get_access_token"
-        auth_url = url + url_path + f"?partner_id={self.partnerId}&timestamp={ts}&sign={sign}&redirect={redirect_url}"
+        auth_url = self.baseURL + url_path + f"?partner_id={self.partnerId}&timestamp={ts}&sign={sign}&redirect={redirect_url}"
 
         return {"auth_url" : auth_url}
 
@@ -91,14 +91,13 @@ class ShopeeModule:
     def get_tokens(self, code):
         try:
             timest = int(time.time())
-            host = "https://partner.test-stable.shopeemobile.com"
             path = "/api/v2/auth/token/get"
             body = {"code": code, "shop_id": int(self.shopId), "partner_id": int(self.partnerId)}
             tmp_base_string = "%s%s%s" % (self.partnerId, path, timest)
             base_string = tmp_base_string.encode()
             partner_key = self.partnerKey.encode()
             sign = hmac.new(partner_key, base_string, hashlib.sha256).hexdigest()
-            url = host + path + "?partner_id=%s&timestamp=%s&sign=%s" % (self.partnerId, timest, sign)
+            url = self.baseURL + path + "?partner_id=%s&timestamp=%s&sign=%s" % (self.partnerId, timest, sign)
             headers = {"Content-Type": "application/json"}
             resp = r.post(url, json=body, headers=headers)
             resp.raise_for_status()  # Raise an exception for non-2xx status codes
