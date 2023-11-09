@@ -10,6 +10,7 @@ from schemas import (
     OrderSubmitURL,
     OrderUpdateDatePayload,
     OrderInitialInputPayload,
+    OrderPICUpdatePayload,
 )
 
 router = APIRouter(tags=["API Order"], prefix="/api_order")
@@ -278,6 +279,42 @@ def update_order(
     return {"msg": f"Update successful"}
 
 
+@router.patch("/id/{order_id}/update_pic")
+def update_order_pic(
+    order_id: str,
+    data: OrderPICUpdatePayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    # Authorize the request with JWT
+    Authorize.jwt_required()
+
+    # Check if the order exists
+    order = db.query(Order_TM).filter(Order_TM.id == order_id).first()
+    if not order:
+        return {"error": "Order not found"}
+
+    before_pic_name = get_user_name(db, order.pic_user_id)
+    after_pic_name = get_user_name(db, data.pic_id)
+
+    # Update the pic_user_id
+    order.pic_user_id = data.pic_id
+
+    # Create the message
+    message = f"PIC was updated from ({before_pic_name}) to ({after_pic_name})"
+
+    # Create an order tracking entry for the message
+    new_order_tracking = OrderTracking_TH(
+        order_id=order.id,
+        activity_msg=message,
+        user_id=data.user_id,
+    )
+    db.add(new_order_tracking)
+    db.commit()
+
+    return {"msg": "Update successful"}
+
+
 @router.patch("/id/{id}/submit_initial_data")
 def update_order_initial_data(
     id: str,
@@ -292,34 +329,46 @@ def update_order_initial_data(
     before_user_deadline_prd = order.user_deadline_prd
     before_internal_status_id = order.internal_status_id
 
+    # Check if the values have changed
+    phone_no_changed = before_phone_no != data.cust_phone_no
+    deadline_changed = before_user_deadline_prd != data.user_deadline_prd
+
     order.cust_phone_no = data.cust_phone_no
     order.user_deadline_prd = data.user_deadline_prd
     order.last_updated_ts = datetime.now()
     if before_internal_status_id == "000":
+        order.pic_user_id = None
         order.internal_status_id = "100"
 
-    # Insert a new row in ordertracking_th
-    phone_msg = (
-        f"Updated phone number from '{before_phone_no}' to '{data.cust_phone_no}'"
-        if before_phone_no
-        else f"Set phone number to '{data.cust_phone_no}'"
-    )
+    # Create update messages only if values change
+    update_messages = []
+    if phone_no_changed:
+        if before_phone_no:
+            update_messages.append(
+                f"Updated phone number from '{before_phone_no}' to '{data.cust_phone_no}'"
+            )
+        else:
+            update_messages.append(f"Set phone number to '{data.cust_phone_no}'")
 
-    deadline_msg = (
-        f"Updated deadline from '{before_user_deadline_prd}' to '{data.user_deadline_prd}'"
-        if before_user_deadline_prd
-        else f"Set deadline to '{data.user_deadline_prd}'"
-    )
+    if deadline_changed:
+        if before_user_deadline_prd:
+            update_messages.append(
+                f"Updated deadline from '{before_user_deadline_prd}' to '{data.user_deadline_prd}'"
+            )
+        else:
+            update_messages.append(f"Set deadline to '{data.user_deadline_prd}'")
 
-    msg = f"{phone_msg} and {deadline_msg}"
+    msg = " and ".join(update_messages)
 
-    new_order_tracking = OrderTracking_TH(
-        order_id=order.id, activity_msg=msg, user_id=data.user_id
-    )
+    if msg:
+        new_order_tracking = OrderTracking_TH(
+            order_id=order.id, activity_msg=msg, user_id=data.user_id
+        )
 
-    db.add(new_order_tracking)
+        db.add(new_order_tracking)
+
     db.commit()
-    return {"msg": f"Update successful"}
+    return {"msg": "Update successful"}
 
 
 @router.patch("/id/{id}/submit_design_acc")
@@ -436,3 +485,12 @@ def extract_link_from_url(url):
     else:
         print("Link not found in the content.")
         return None
+
+
+def get_user_name(db, user_id):
+    user_name = "-"
+    if user_id is not None:
+        user = db.query(User_TM).filter(User_TM.id == user_id).first()
+        if user:
+            user_name = user.username
+    return user_name

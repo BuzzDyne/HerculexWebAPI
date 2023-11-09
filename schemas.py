@@ -151,3 +151,9 @@ class OrderInitialInputPayload(BaseModel):
     user_id: Optional[int]
     cust_phone_no: Optional[str]
     user_deadline_prd: Optional[str]
+
+
+# Order PIC Form
+class OrderPICUpdatePayload(BaseModel):
+    user_id: Optional[int]
+    pic_id: Optional[int]
