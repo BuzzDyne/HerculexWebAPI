@@ -2,6 +2,7 @@ import requests as r
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from datetime import datetime, timedelta
 
 from database import get_db, Order_TM, OrderItem_TR, OrderTracking_TH, User_TM
@@ -52,13 +53,29 @@ def get_active_orders(db: Session = Depends(get_db)):
 
 @router.get("/get_orders_by_status")
 def get_orders_by_status(status: str, db: Session = Depends(get_db)):
-    res = (
-        db.query(Order_TM, User_TM.username)
-        .outerjoin(User_TM, Order_TM.pic_user_id == User_TM.id)
-        .filter(Order_TM.internal_status_id == status)
-        .order_by(Order_TM.id.desc())
-        .all()
-    )
+    if status == "admin":
+        # If status is admin, include orders with status 000 or 200
+        res = (
+            db.query(Order_TM, User_TM.username)
+            .outerjoin(User_TM, Order_TM.pic_user_id == User_TM.id)
+            .filter(
+                or_(
+                    Order_TM.internal_status_id == "000",
+                    Order_TM.internal_status_id == "200",
+                )
+            )
+            .order_by(Order_TM.internal_status_id.desc(), Order_TM.id.desc())
+            .all()
+        )
+    else:
+        # For other statuses, filter by the specified status
+        res = (
+            db.query(Order_TM, User_TM.username)
+            .outerjoin(User_TM, Order_TM.pic_user_id == User_TM.id)
+            .filter(Order_TM.internal_status_id == status)
+            .order_by(Order_TM.internal_status_id.desc(), Order_TM.id.desc())
+            .all()
+        )
 
     response_data = [
         {"order": order.__dict__, "pic_username": username} for order, username in res
@@ -151,7 +168,19 @@ def get_order_details(
 
     order_tm, order_items = zip(*query)
 
-    # Query to fetch data from 'ordertracking_th' table based on the 'order_id' column
+    # Check pic_user_id against User_TM directly
+    pic_user_query = (
+        db.query(User_TM.username).filter(User_TM.id == order_tm[0].pic_user_id).first()
+    )
+
+    result = {
+        "order_data": order_tm[0],
+        "order_items_data": order_items,
+        "order_trackings": [],
+        "pic_username": pic_user_query.username if pic_user_query else None,
+    }
+
+    # Fetch order tracking data and associated username
     order_tracking_query = (
         db.query(OrderTracking_TH, User_TM.username)
         .outerjoin(User_TM, OrderTracking_TH.user_id == User_TM.id)
@@ -159,12 +188,6 @@ def get_order_details(
         .order_by(OrderTracking_TH.id.desc())
         .all()
     )
-
-    result = {
-        "order_data": order_tm[0],
-        "order_items_data": order_items,
-        "order_trackings": [],
-    }
 
     # Loop through the results and create a list of dictionaries with the required data
     for tracking, username in order_tracking_query:
@@ -247,8 +270,9 @@ def update_order(
     db: Session = Depends(get_db),
 ):
     Authorize.jwt_required()
-
     order = check_if_order_exist(id, db)
+
+    before_internal_status_id = order.internal_status_id
 
     extracted_thumb_url = (
         extract_link_from_url(data.thumb_file_url) if data.thumb_file_url else None
@@ -261,7 +285,11 @@ def update_order(
         data.thumb_file_url if data.thumb_file_url else order.google_file_url
     )
     order.thumb_url = extracted_thumb_url
+    order.last_updated_ts = datetime.now()
     order.design_sub_dt = datetime.now()
+    if before_internal_status_id == "100":
+        order.pic_user_id = None
+        order.internal_status_id = "200"
 
     db.commit()
     db.refresh(order)
@@ -299,6 +327,7 @@ def update_order_pic(
 
     # Update the pic_user_id
     order.pic_user_id = data.pic_id
+    order.last_updated_ts = datetime.now()
 
     # Create the message
     message = f"PIC was updated from ({before_pic_name}) to ({after_pic_name})"
@@ -335,6 +364,7 @@ def update_order_initial_data(
 
     order.cust_phone_no = data.cust_phone_no
     order.user_deadline_prd = data.user_deadline_prd
+    order.initial_input_dt = datetime.now()
     order.last_updated_ts = datetime.now()
     if before_internal_status_id == "000":
         order.pic_user_id = None
@@ -379,17 +409,47 @@ def update_order_design_acc(
     db: Session = Depends(get_db),
 ):
     Authorize.jwt_required()
-
     order = check_if_order_exist(id, db)
 
-    order.design_acc_dt = data.date if data.date else datetime.now()
+    before_internal_status_id = order.internal_status_id
 
-    db.commit()
-    db.refresh(order)
+    order.design_acc_dt = data.date if data.date else datetime.now()
+    order.last_updated_ts = datetime.now()
+    if before_internal_status_id == "200":
+        order.pic_user_id = None
+        order.internal_status_id = "300"
 
     # Insert a new row in ordertracking_th
     new_order_tracking = OrderTracking_TH(
-        order_id=order.id, activity_msg=f"Approved Design URLs", user_id=data.user_id
+        order_id=order.id, activity_msg=f"Approved Design", user_id=data.user_id
+    )
+
+    db.add(new_order_tracking)
+    db.commit()
+    return {"msg": f"Update successful"}
+
+
+@router.patch("/id/{id}/submit_design_rej")
+def update_order_design_rej(
+    id: str,
+    data: OrderUpdateDatePayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+    order = check_if_order_exist(id, db)
+
+    before_internal_status_id = order.internal_status_id
+
+    order.last_updated_ts = datetime.now()
+    if before_internal_status_id == "200":
+        order.design_sub_dt = None
+        order.pic_user_id = None
+        order.internal_status_id = "100"
+
+    # Insert a new row in ordertracking_th
+    new_order_tracking = OrderTracking_TH(
+        order_id=order.id, activity_msg=f"Rejected Design", user_id=data.user_id
     )
 
     db.add(new_order_tracking)
@@ -405,13 +465,15 @@ def update_order_print_done(
     db: Session = Depends(get_db),
 ):
     Authorize.jwt_required()
-
     order = check_if_order_exist(id, db)
 
-    order.print_done_dt = data.date if data.date else datetime.now()
+    before_internal_status_id = order.internal_status_id
 
-    db.commit()
-    db.refresh(order)
+    order.print_done_dt = data.date if data.date else datetime.now()
+    order.last_updated_ts = datetime.now()
+    if before_internal_status_id == "300":
+        order.pic_user_id = None
+        order.internal_status_id = "400"
 
     # Insert a new row in ordertracking_th
     new_order_tracking = OrderTracking_TH(
@@ -432,13 +494,15 @@ def update_order_packing_done(
     db: Session = Depends(get_db),
 ):
     Authorize.jwt_required()
-
     order = check_if_order_exist(id, db)
 
-    order.packing_done_dt = data.date if data.date else datetime.now()
+    before_internal_status_id = order.internal_status_id
 
-    db.commit()
-    db.refresh(order)
+    order.packing_done_dt = data.date if data.date else datetime.now()
+    order.last_updated_ts = datetime.now()
+    if before_internal_status_id == "400":
+        order.pic_user_id = None
+        order.internal_status_id = "999"
 
     # Insert a new row in ordertracking_th
     new_order_tracking = OrderTracking_TH(
