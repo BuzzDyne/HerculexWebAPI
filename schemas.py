@@ -163,3 +163,12 @@ class OrderPICUpdatePayload(BaseModel):
 class OrderCommentCreatePayload(BaseModel):
     user_id: int
     comment: str
+
+
+# Manual Order Form
+class ManualOrderPayload(BaseModel):
+    platform_code: str
+    product_name: str
+    quantity: int
+    price: int
+    user_id: int

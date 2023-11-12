@@ -20,9 +20,73 @@ from schemas import (
     OrderInitialInputPayload,
     OrderPICUpdatePayload,
     OrderCommentCreatePayload,
+    ManualOrderPayload,
 )
 
 router = APIRouter(tags=["API Order"], prefix="/api_order")
+
+
+@router.post("/post_manual_order")
+def post_manual_order(
+    data: ManualOrderPayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+
+    # Ensure platform_code is valid
+    if data.platform_code not in {"X", "Y", "Z"}:
+        raise HTTPException(
+            status_code=400, detail="Invalid platform_code. Must be 'X', 'Y', or 'Z'."
+        )
+
+    # Check given user_id
+    user = check_if_user_exist(data.user_id, db)
+
+    # Create Order
+    new_order = Order_TM(
+        ecommerce_code=data.platform_code,
+        feeding_dt=datetime.now(),
+        ecom_order_status="MANUAL",
+        internal_status_id="000",
+    )
+
+    db.add(new_order)
+    db.commit()
+    db.refresh(new_order)
+
+    # Get the id of the newly created Order
+    order_id = new_order.id
+
+    # Form ecom_order_id with the formula new_order.ecommerce_code + new_order.id (10 digits, zero pad)
+    ecom_order_id = f"{new_order.ecommerce_code}{order_id:010d}"
+
+    # Update the new_order.ecom_order_id with the new formula
+    new_order.ecom_order_id = ecom_order_id
+    db.commit()
+
+    # Create OrderItem
+    new_item = OrderItem_TR(
+        ecom_order_id=ecom_order_id,
+        product_name=data.product_name,
+        quantity=data.quantity,
+        product_price=data.price,
+    )
+
+    db.add(new_item)
+
+    # Create Tracking
+    new_order_tracking = OrderTracking_TH(
+        order_id=order_id,
+        activity_msg=f"Created manual order to system",
+        user_id=data.user_id,
+    )
+
+    db.add(new_order_tracking)
+
+    db.commit()
+
+    return {"msg": "Manual order successfully saved!"}
 
 
 @router.get("/get_all_orders")
