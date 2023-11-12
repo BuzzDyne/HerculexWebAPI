@@ -157,3 +157,9 @@ class OrderInitialInputPayload(BaseModel):
 class OrderPICUpdatePayload(BaseModel):
     user_id: Optional[int]
     pic_id: Optional[int]
+
+
+# Order Comment Form
+class OrderCommentCreatePayload(BaseModel):
+    user_id: int
+    comment: str

@@ -5,13 +5,21 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import datetime, timedelta
 
-from database import get_db, Order_TM, OrderItem_TR, OrderTracking_TH, User_TM
+from database import (
+    get_db,
+    Order_TM,
+    OrderItem_TR,
+    OrderTracking_TH,
+    User_TM,
+    OrderComment_TH,
+)
 from schemas import (
     OrderUpdate,
     OrderSubmitURL,
     OrderUpdateDatePayload,
     OrderInitialInputPayload,
     OrderPICUpdatePayload,
+    OrderCommentCreatePayload,
 )
 
 router = APIRouter(tags=["API Order"], prefix="/api_order")
@@ -203,6 +211,62 @@ def get_order_details(
         )
 
     return result
+
+
+@router.get("/id/{id}/get_comments")
+def get_comments(
+    id: str,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    # Authorize.jwt_required()
+    order = check_if_order_exist(id, db)
+
+    result = (
+        db.query(OrderComment_TH, User_TM.username.label("creator_username"))
+        .filter(OrderComment_TH.creator_id == User_TM.id)
+        .filter(OrderComment_TH.order_id == id)
+        .order_by(OrderComment_TH.id.desc())
+        .all()
+    )
+
+    # Convert the result to a list of dictionaries
+    comments = [
+        {
+            "id": comment[0].id,
+            "creator_id": comment[0].creator_id,
+            "order_id": comment[0].order_id,
+            "comment_text": comment[0].comment_text,
+            "comment_date": comment[0].comment_date,
+            "creator_username": comment.creator_username,
+        }
+        for comment in result
+    ]
+
+    return comments
+
+
+@router.post("/id/{id}/post_comment")
+def post_comment(
+    id: str,
+    data: OrderCommentCreatePayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+
+    order = check_if_order_exist(id, db)
+    user = check_if_user_exist(data.user_id, db)
+
+    new_comment = OrderComment_TH(
+        creator_id=data.user_id, order_id=id, comment_text=data.comment
+    )
+
+    db.add(new_comment)
+    db.commit()
+    db.refresh(new_comment)
+
+    return {"msg": f"Comment successfully saved!"}
 
 
 @router.patch("/id/{id}")
@@ -520,7 +584,18 @@ def check_if_order_exist(id, db: Session):
 
     if not query:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="ID not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"OrderID {id} not found"
+        )
+
+    return query
+
+
+def check_if_user_exist(id, db: Session):
+    query = db.query(User_TM).filter(User_TM.id == id).first()
+
+    if not query:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"UserID {id} not found"
         )
 
     return query
