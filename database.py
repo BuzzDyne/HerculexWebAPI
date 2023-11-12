@@ -13,16 +13,18 @@ Base = automap_base()
 
 Base.prepare(engine, reflect=True)
 
-Order_TM                = Base.classes.order_tm
-OrderItem_TR            = Base.classes.orderitem_tr
+Order_TM = Base.classes.order_tm
+OrderItem_TR = Base.classes.orderitem_tr
 HCXProcessSyncStatus_TM = Base.classes.hcxprocesssyncstatus_tm
-OrderTracking_TH        = Base.classes.ordertracking_th
-User_TM                 = Base.classes.user_tm
-Role_TM                 = Base.classes.role_tm
+OrderTracking_TH = Base.classes.ordertracking_th
+User_TM = Base.classes.user_tm
+Role_TM = Base.classes.role_tm
+OrderComment_TH = Base.classes.ordercomment_th
+
 
 def get_db():
-        db = SessionLocal()
-        try:
-            yield db
-        finally:
-            db.close()
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

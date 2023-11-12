@@ -1,6 +1,7 @@
 from typing import List, Union, Optional
 from pydantic import BaseModel
 
+
 # User Table
 class User(BaseModel):
     id: Optional[int]
@@ -98,10 +99,12 @@ class GlobalLogging(BaseModel):
     class Config:
         orm_mode = True
 
+
 # Login Form
 class LoginForm(BaseModel):
     username: str
     password: str
+
 
 # Register Form
 class RegisterForm(BaseModel):
@@ -109,31 +112,63 @@ class RegisterForm(BaseModel):
     password: str
     rolename: str
 
+
 # Register Form
 class EditUserForm(BaseModel):
     rolename: str
     password: str
 
+
 # Order Update Form
 class OrderUpdate(BaseModel):
     initial_input_dt: Optional[str]
-    cust_phone_no   : Optional[str]
+    cust_phone_no: Optional[str]
     user_deadline_prd: Optional[str]
-    design_sub_dt   : Optional[str]
-    design_acc_dt   : Optional[str]
+    design_sub_dt: Optional[str]
+    design_acc_dt: Optional[str]
     google_folder_url: Optional[str]
-    google_file_url : Optional[str]
-    print_done_dt   : Optional[str]
-    packing_done_dt : Optional[str]
-    user_id         : Optional[int]
+    google_file_url: Optional[str]
+    print_done_dt: Optional[str]
+    packing_done_dt: Optional[str]
+    user_id: Optional[int]
+
 
 # Order Submit URL Form
 class OrderSubmitURL(BaseModel):
-    folder_url      : Optional[str]
-    thumb_file_url  : Optional[str]
-    user_id         : Optional[int]
+    folder_url: Optional[str]
+    thumb_file_url: Optional[str]
+    user_id: Optional[int]
+
 
 # Order Submit URL Form
 class OrderUpdateDatePayload(BaseModel):
-    user_id   : Optional[int]
-    date      : Optional[str]
+    user_id: Optional[int]
+    date: Optional[str]
+
+
+# Order Initial Input Form
+class OrderInitialInputPayload(BaseModel):
+    user_id: Optional[int]
+    cust_phone_no: Optional[str]
+    user_deadline_prd: Optional[str]
+
+
+# Order PIC Form
+class OrderPICUpdatePayload(BaseModel):
+    user_id: Optional[int]
+    pic_id: Optional[int]
+
+
+# Order Comment Form
+class OrderCommentCreatePayload(BaseModel):
+    user_id: int
+    comment: str
+
+
+# Manual Order Form
+class ManualOrderPayload(BaseModel):
+    platform_code: str
+    product_name: str
+    quantity: int
+    price: int
+    user_id: int
