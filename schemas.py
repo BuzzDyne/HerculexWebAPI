@@ -149,6 +149,7 @@ class OrderUpdateDatePayload(BaseModel):
 # Order Initial Input Form
 class OrderInitialInputPayload(BaseModel):
     user_id: Optional[int]
+    pic_user_id: Optional[str]
     cust_phone_no: Optional[str]
     user_deadline_prd: Optional[str]
 

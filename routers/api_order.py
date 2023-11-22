@@ -516,6 +516,11 @@ def update_order_initial_data(
         else:
             update_messages.append(f"Set deadline to '{data.user_deadline_prd}'")
 
+    if data.pic_user_id:
+        order.pic_user_id = data.pic_user_id
+        after_pic_name = get_user_name(db, data.pic_user_id)
+        update_messages.append(f"PIC set to {after_pic_name}")
+
     msg = " and ".join(update_messages)
 
     if msg:
