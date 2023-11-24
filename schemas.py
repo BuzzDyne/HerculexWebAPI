@@ -1,4 +1,4 @@
-from typing import List, Union, Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -149,6 +149,7 @@ class OrderUpdateDatePayload(BaseModel):
 # Order Initial Input Form
 class OrderInitialInputPayload(BaseModel):
     user_id: Optional[int]
+    pic_user_id: Optional[str]
     cust_phone_no: Optional[str]
     user_deadline_prd: Optional[str]
 
@@ -172,3 +173,13 @@ class ManualOrderPayload(BaseModel):
     quantity: int
     price: int
     user_id: int
+
+
+class UserIDPayload(BaseModel):
+    user_id: int
+
+
+class CreateBatchFilePayload(BaseModel):
+    designer_id: int
+    order_ids: List[int]
+    remarks: Optional[str]

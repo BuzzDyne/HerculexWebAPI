@@ -1,7 +1,9 @@
+import random
+import string
 import requests as r
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi_jwt_auth import AuthJWT
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy import or_
 from datetime import datetime, timedelta
 
@@ -12,6 +14,7 @@ from database import (
     OrderTracking_TH,
     User_TM,
     OrderComment_TH,
+    OrderBatchfile_TM,
 )
 from schemas import (
     OrderUpdate,
@@ -21,6 +24,8 @@ from schemas import (
     OrderPICUpdatePayload,
     OrderCommentCreatePayload,
     ManualOrderPayload,
+    CreateBatchFilePayload,
+    UserIDPayload,
 )
 
 router = APIRouter(tags=["API Order"], prefix="/api_order")
@@ -105,8 +110,7 @@ def get_all_orders(db: Session = Depends(get_db)):
 
 @router.get("/last_3_months")
 def get_active_orders(db: Session = Depends(get_db)):
-    # Calculate the date three months ago from the current date
-    three_months_ago = datetime.now() - timedelta(days=10)  # Assuming 30 days per month
+    three_months_ago = datetime.now() - timedelta(days=30)  # Assuming 30 days per month
 
     res = (
         db.query(Order_TM, User_TM.username)
@@ -168,52 +172,15 @@ def get_active_orders(db: Session = Depends(get_db)):
     return res
 
 
-@router.get("/get_designer_tasks")
-def get_designer_tasks(db: Session = Depends(get_db)):
-    ecom_status_order_values = [200, 400]
+@router.get("/get_batchfile_tasks")
+def get_batchfile_tasks(db: Session = Depends(get_db)):
+    ecom_status_order_values = [250]
     res = (
         db.query(Order_TM)
         .filter(
             Order_TM.ecom_order_status.in_(ecom_status_order_values),
-            Order_TM.design_acc_dt.is_(None),
-            Order_TM.initial_input_dt.isnot(None),
-        )
-        .order_by(Order_TM.user_deadline_prd.asc())
-        .all()
-    )
-    return res
-
-
-@router.get("/get_printer_tasks")
-def get_printer_tasks(db: Session = Depends(get_db)):
-    ecom_status_order_value = 400
-    res = (
-        db.query(Order_TM)
-        .filter(
-            Order_TM.ecom_order_status == ecom_status_order_value,
-            Order_TM.initial_input_dt.isnot(None),
+            Order_TM.batch_done_dt.is_(None),
             Order_TM.design_acc_dt.isnot(None),
-            Order_TM.design_sub_dt.isnot(None),
-            Order_TM.print_done_dt.is_(None),
-        )
-        .order_by(Order_TM.user_deadline_prd.asc())
-        .all()
-    )
-    return res
-
-
-@router.get("/get_packer_tasks")
-def get_packer_tasks(db: Session = Depends(get_db)):
-    ecom_status_order_value = 400
-    res = (
-        db.query(Order_TM)
-        .filter(
-            Order_TM.ecom_order_status == ecom_status_order_value,
-            Order_TM.initial_input_dt.isnot(None),
-            Order_TM.design_acc_dt.isnot(None),
-            Order_TM.design_sub_dt.isnot(None),
-            Order_TM.print_done_dt.isnot(None),
-            Order_TM.packing_done_dt.is_(None),
         )
         .order_by(Order_TM.user_deadline_prd.asc())
         .all()
@@ -245,11 +212,19 @@ def get_order_details(
         db.query(User_TM.username).filter(User_TM.id == order_tm[0].pic_user_id).first()
     )
 
+    # Check batchfile_id against OrderBatchfile_TM
+    batch = (
+        db.query(OrderBatchfile_TM.batch_name)
+        .filter(OrderBatchfile_TM.id == order_tm[0].batchfile_id)
+        .first()
+    )
+
     result = {
         "order_data": order_tm[0],
         "order_items_data": order_items,
         "order_trackings": [],
         "pic_username": pic_user_query.username if pic_user_query else None,
+        "batch_name": batch.batch_name if batch else None,
     }
 
     # Fetch order tracking data and associated username
@@ -283,7 +258,7 @@ def get_comments(
     Authorize: AuthJWT = Depends(),
     db: Session = Depends(get_db),
 ):
-    # Authorize.jwt_required()
+    Authorize.jwt_required()
     order = check_if_order_exist(id, db)
 
     result = (
@@ -516,6 +491,11 @@ def update_order_initial_data(
         else:
             update_messages.append(f"Set deadline to '{data.user_deadline_prd}'")
 
+    if data.pic_user_id:
+        order.pic_user_id = data.pic_user_id
+        after_pic_name = get_user_name(db, data.pic_user_id)
+        update_messages.append(f"PIC set to {after_pic_name}")
+
     msg = " and ".join(update_messages)
 
     if msg:
@@ -545,7 +525,7 @@ def update_order_design_acc(
     order.last_updated_ts = datetime.now()
     if before_internal_status_id == "200":
         order.pic_user_id = None
-        order.internal_status_id = "300"
+        order.internal_status_id = "250"
 
     # Insert a new row in ordertracking_th
     new_order_tracking = OrderTracking_TH(
@@ -643,12 +623,189 @@ def update_order_packing_done(
     return {"msg": f"Update successful"}
 
 
+@router.get("/batchfile/last_3_month")
+def get_batchfile_last3month(db: Session = Depends(get_db)):
+    three_months_ago = datetime.now() - timedelta(days=30)
+    designer_user = aliased(User_TM)
+    printer_user = aliased(User_TM)
+
+    res = (
+        db.query(
+            OrderBatchfile_TM,
+            designer_user.username.label("designer_username"),
+            printer_user.username.label("printer_username"),
+        )
+        .outerjoin(
+            designer_user, OrderBatchfile_TM.designer_user_id == designer_user.id
+        )
+        .outerjoin(printer_user, OrderBatchfile_TM.printer_user_id == printer_user.id)
+        .filter(OrderBatchfile_TM.create_dt >= three_months_ago)
+        .order_by(OrderBatchfile_TM.id.desc())
+        .all()
+    )
+
+    result_list = []
+    for order_batchfile, designer_username, printer_username in res:
+        order_dict = order_batchfile.__dict__
+        order_dict["designer_username"] = designer_username
+        order_dict["printer_username"] = printer_username
+
+        # Get Order_TM data for the current batch
+        order_list = (
+            db.query(Order_TM).filter(Order_TM.batchfile_id == order_batchfile.id).all()
+        )
+
+        order_dict["batch_order_list"] = [order.__dict__ for order in order_list]
+
+        result_list.append(order_dict)
+
+    return result_list
+
+
+@router.get("/batchfile/active")
+def get_batchfile_last3month(db: Session = Depends(get_db)):
+    designer_user = aliased(User_TM)
+    printer_user = aliased(User_TM)
+
+    res = (
+        db.query(
+            OrderBatchfile_TM,
+            designer_user.username.label("designer_username"),
+            printer_user.username.label("printer_username"),
+        )
+        .outerjoin(
+            designer_user, OrderBatchfile_TM.designer_user_id == designer_user.id
+        )
+        .outerjoin(printer_user, OrderBatchfile_TM.printer_user_id == printer_user.id)
+        .filter(OrderBatchfile_TM.printed_dt.is_(None))
+        .order_by(OrderBatchfile_TM.id.desc())
+        .all()
+    )
+
+    result_list = []
+    for order_batchfile, designer_username, printer_username in res:
+        order_dict = order_batchfile.__dict__
+        order_dict["designer_username"] = designer_username
+        order_dict["printer_username"] = printer_username
+
+        # Get Order_TM data for the current batch
+        order_list = (
+            db.query(Order_TM).filter(Order_TM.batchfile_id == order_batchfile.id).all()
+        )
+
+        order_dict["batch_order_list"] = [order.__dict__ for order in order_list]
+
+        result_list.append(order_dict)
+
+    return result_list
+
+
+@router.patch("/batchfile/id/{id}/submit_print_done")
+def submit_batchfile_print_done(
+    id: str,
+    data: UserIDPayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+
+    # Check if printerID exists
+    printer = check_if_user_exist(data.user_id, db)
+
+    # Check if batchfileID exists
+    batchfile = check_if_batchfile_exist(id, db)
+
+    # Update batchFile
+    batchfile.printer_user_id = printer.id
+    batchfile.printed_dt = datetime.now()
+
+    # Update orders
+    related_orders = (
+        db.query(Order_TM).filter(Order_TM.batchfile_id == batchfile.id).all()
+    )
+    for o in related_orders:
+        o.print_done_dt = datetime.now()
+        o.last_updated_ts = datetime.now()
+        o.internal_status_id = "400"
+
+        # Insert a new row in ordertracking_th
+        new_order_tracking = OrderTracking_TH(
+            order_id=o.id,
+            activity_msg=f"Printing Process Done (BatchFile {batchfile.batch_name})",
+            user_id=printer.id,
+        )
+
+        db.add(new_order_tracking)
+    db.commit()
+
+    return {"msg": f"Update successful"}
+
+
+@router.post("/batchfile/new")
+def create_batchfile(
+    data: CreateBatchFilePayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+
+    validated_orders = []
+
+    # Check if all Order is valid
+    for order_id in data.order_ids:
+        order = check_if_order_exist(order_id, db)
+        validated_orders.append(order)
+
+    # Check if designer_id is valid
+    designer = check_if_user_exist(data.designer_id, db)
+
+    # Create BatchFile
+    new_batch = OrderBatchfile_TM(
+        batch_name=generate_readable_id(),
+        remarks=data.remarks,
+        create_dt=datetime.now(),
+        designer_user_id=designer.id,
+    )
+
+    db.add(new_batch)
+    db.commit()
+    db.refresh(new_batch)
+
+    # Update Each Order
+    for order in validated_orders:
+        order.last_updated_ts = datetime.now()
+        order.batch_done_dt = datetime.now()
+        order.batchfile_id = new_batch.id
+        order.internal_status_id = "300"
+
+        new_order_tracking = OrderTracking_TH(
+            order_id=order.id,
+            activity_msg=f"Assigned to BatchFile ({new_batch.batch_name})",
+            user_id=designer.id,
+        )
+
+        db.add(new_order_tracking)
+    db.commit()
+    return {"msg": f"Create BatchFile ({new_batch.batch_name}) successful"}
+
+
 def check_if_order_exist(id, db: Session):
     query = db.query(Order_TM).filter(Order_TM.id == id).first()
 
     if not query:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"OrderID {id} not found"
+        )
+
+    return query
+
+
+def check_if_batchfile_exist(id, db: Session):
+    query = db.query(OrderBatchfile_TM).filter(OrderBatchfile_TM.id == id).first()
+
+    if not query:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"BatchFileID {id} not found"
         )
 
     return query
@@ -697,3 +854,10 @@ def get_user_name(db, user_id):
         if user:
             user_name = user.username
     return user_name
+
+
+def generate_readable_id():
+    characters = "".join(
+        [ch for ch in string.ascii_uppercase + string.digits if ch not in "OIL01"]
+    )
+    return "".join(random.choices(characters, k=4))
