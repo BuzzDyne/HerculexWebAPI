@@ -20,6 +20,7 @@ OrderTracking_TH = Base.classes.ordertracking_th
 User_TM = Base.classes.user_tm
 Role_TM = Base.classes.role_tm
 OrderComment_TH = Base.classes.ordercomment_th
+OrderBatchfile_TM = Base.classes.orderbatchfile_tm
 
 
 def get_db():

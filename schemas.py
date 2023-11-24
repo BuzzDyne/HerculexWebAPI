@@ -1,4 +1,4 @@
-from typing import List, Union, Optional
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -173,3 +173,13 @@ class ManualOrderPayload(BaseModel):
     quantity: int
     price: int
     user_id: int
+
+
+class UserIDPayload(BaseModel):
+    user_id: int
+
+
+class CreateBatchFilePayload(BaseModel):
+    designer_id: int
+    order_ids: List[int]
+    remarks: Optional[str]
