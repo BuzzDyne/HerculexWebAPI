@@ -26,6 +26,7 @@ from schemas import (
     ManualOrderPayload,
     CreateBatchFilePayload,
     UserIDPayload,
+    StringPayload,
 )
 
 router = APIRouter(tags=["API Order"], prefix="/api_order")
@@ -186,6 +187,34 @@ def get_batchfile_tasks(db: Session = Depends(get_db)):
         .all()
     )
     return res
+
+
+@router.post("/get_by_ecom_id")
+def get_order_details(
+    data: StringPayload, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)
+):
+    Authorize.jwt_required()
+
+    # Extract payload from the request data
+    payload = data.payload
+
+    # Query the database to retrieve the first Order_TM data based on the payload
+    order_tm = (
+        db.query(Order_TM)
+        .filter(or_(Order_TM.invoice_ref == payload, Order_TM.ecom_order_id == payload))
+        .first()
+    )
+
+    # Check if the query result is empty
+    if not order_tm:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="No matching order found"
+        )
+
+    # Convert the result to a dictionary for JSON output
+    order_data = order_tm.__dict__
+
+    return order_tm
 
 
 @router.get("/id/{id}")

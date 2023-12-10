@@ -183,3 +183,7 @@ class CreateBatchFilePayload(BaseModel):
     designer_id: int
     order_ids: List[int]
     remarks: Optional[str]
+
+
+class StringPayload(BaseModel):
+    payload: str
