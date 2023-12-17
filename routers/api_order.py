@@ -27,6 +27,7 @@ from schemas import (
     CreateBatchFilePayload,
     UserIDPayload,
     StringPayload,
+    StringPayloadWithUserID,
 )
 
 router = APIRouter(tags=["API Order"], prefix="/api_order")
@@ -430,6 +431,36 @@ def update_order(
     new_order_tracking = OrderTracking_TH(
         order_id=order.id,
         activity_msg=f"Updated Design URL to ({order.google_folder_url}) and Thumbnail URL to ({order.google_file_url})",
+        user_id=data.user_id,
+    )
+
+    db.add(new_order_tracking)
+    db.commit()
+
+    return {"msg": f"Update successful"}
+
+
+@router.patch("/id/{id}/update_thumb_url")
+def update_thumb_url(
+    id: str,
+    data: StringPayloadWithUserID,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+    order = check_if_order_exist(id, db)
+
+    order.google_file_url = data.payload if data.payload else order.google_file_url
+    order.thumb_url = extract_link_from_url(data.payload) if data.payload else None
+    order.last_updated_ts = datetime.now()
+
+    db.commit()
+    db.refresh(order)
+
+    # Insert a new row in ordertracking_th
+    new_order_tracking = OrderTracking_TH(
+        order_id=order.id,
+        activity_msg=f"Updated Thumbnail URL to ({order.google_file_url})",
         user_id=data.user_id,
     )
 

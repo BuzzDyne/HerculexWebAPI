@@ -187,3 +187,8 @@ class CreateBatchFilePayload(BaseModel):
 
 class StringPayload(BaseModel):
     payload: str
+
+
+class StringPayloadWithUserID(BaseModel):
+    payload: str
+    user_id: int
