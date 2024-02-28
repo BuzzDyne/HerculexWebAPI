@@ -192,3 +192,25 @@ class StringPayload(BaseModel):
 class StringPayloadWithUserID(BaseModel):
     payload: str
     user_id: int
+
+
+class OrderDocumentItem(BaseModel):
+    item_name: str
+    item_price: float
+    item_qty: int
+
+
+class OrderDocument(BaseModel):
+    order_id: Optional[int]
+    doc_type: str
+    doc_number: str
+    customer_name: str
+    customer_addr_1: str
+    customer_addr_2: str
+    customer_addr_3: str
+    customer_addr_4: str
+    cust_phone: str
+    cust_fax: str
+    due_date: str
+    items: List[OrderDocumentItem]
+    discount: float
