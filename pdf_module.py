@@ -3,12 +3,26 @@ from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 
 doc_type_mapping = {"Q": "QUO", "I": "INV"}
+CAP_IMAGE_PATH = "res/CapTTD.png"
+NORMAL_FONT = "MyPoppin"
+BOLD_FONT = "MyPoppin-Bold"
+ITALIC_FONT = "MyPoppin-Italic"
+
+# NORMAL_FONT = "Helvetica"
+# BOLD_FONT = "Helvetica-Bold"
+# ITALIC_FONT = "Helvetica-Oblique"
 
 
 def generate_pdf(invoice_data):
-    table_header = ["Keterangan", "Harga (Rp)", "Qty", "Jml (Rp)"]
+    pdfmetrics.registerFont(TTFont("MyPoppin", "res/fonts/Poppins-Regular.ttf"))
+    pdfmetrics.registerFont(TTFont("MyPoppin-Bold", "res/fonts/Poppins-SemiBold.ttf"))
+    pdfmetrics.registerFont(TTFont("MyPoppin-Italic", "res/fonts/Poppins-Italic.ttf"))
+
+    table_header = ["Keterangan", "Harga(Rp)", "Qty", "Jml(Rp)"]
     col_widths = [350, 70, 30, 75]
     row_height = 20
     x, y = 42, 600
@@ -28,7 +42,7 @@ def generate_pdf(invoice_data):
     p.drawImage(img, 0, 0, width=A4[0], height=A4[1], preserveAspectRatio=True)
 
     # Populate Header
-    p.setFont("Helvetica", 10)
+    p.setFont(NORMAL_FONT, 10)
     p.setFillColorRGB(0.20784313725490197, 0.1843137254901961, 0.21176470588235294)
     p.drawString(363, 721, invoice_data["customer_name"])
     # p.drawString(295, 709.5, f"Alamat")
@@ -42,7 +56,7 @@ def generate_pdf(invoice_data):
     # p.drawString(42, 653.75, f"Jatuh Tempo:")
     p.drawString(110, 653.75, invoice_data["due_date"])
 
-    p.setFont("Helvetica-Oblique", 12)
+    p.setFont(ITALIC_FONT, 12)
     # p.drawString(40, 705.5, f"No.")
     doc_number = invoice_data["doc_number"]
     p.drawString(
@@ -52,16 +66,16 @@ def generate_pdf(invoice_data):
     )
     p.setTitle(doc_number)
     # Customer Information
-    p.setFont("Helvetica", 12)
+    p.setFont(NORMAL_FONT, 12)
 
     # Table Header
     for i, header in enumerate(table_header):
-        p.setFont("Helvetica-Bold", 12)
+        p.setFont(BOLD_FONT, 12)
         p.drawString(x + sum(col_widths[:i]), y, header)
 
     # Table Data
     subtotal = 0
-    p.setFont("Helvetica", 12)
+    p.setFont(NORMAL_FONT, 11)
     for item in invoice_data["items"]:
         y -= row_height
         item_total = item["price"] * item["quantity"]
@@ -109,7 +123,7 @@ def generate_pdf(invoice_data):
     )
     # Total
     grand_total = subtotal - invoice_data["diskon"]
-    p.setFont("Helvetica-Bold", 12)
+    p.setFont(BOLD_FONT, 12)
     p.drawString(x + col_widths[0], y - (row_height * 3), f"Total")
     p.drawString(
         x + col_widths[0] + col_widths[1] + col_widths[2],
@@ -127,7 +141,7 @@ def generate_pdf(invoice_data):
     terbilang_y = y - (row_height * 4)
     row_height = 15
     p.drawString(x, terbilang_y, f"Terbilang")
-    p.setFont("Helvetica", 12)
+    p.setFont(NORMAL_FONT, 12)
     list_of_terbilang = convert_to_terbilang(grand_total)
 
     for item in list_of_terbilang:
@@ -135,19 +149,30 @@ def generate_pdf(invoice_data):
         p.drawString(x, terbilang_y, f"{item}")
 
     # TTD
-    p.setFont("Helvetica", 12)
+    p.setFont(BOLD_FONT, 12)
+    ttd_base_x = x + col_widths[0] - 10
+    ttd_base_y = terbilang_y - (row_height * 1) - 5
     p.drawString(
-        x + col_widths[0] - 10,
-        y - (row_height * 12),
-        f"(..................................................)",
+        ttd_base_x + 27,
+        ttd_base_y - (row_height * 4.6),
+        f"HERCULEX INDONESIA",
     )
 
-    # Owner Name and Signature
-    # p.setFont("Helvetica-Bold", 12)
-    # p.drawString(100, y - row_height - 25, "Owner Name")
+    p.drawImage(
+        CAP_IMAGE_PATH,
+        ttd_base_x + 30,
+        ttd_base_y - (row_height * 4),
+        120,
+        90,
+        mask="auto",
+    )
 
-    # p.setFont("Helvetica", 10)
-    # p.drawString(100, y - row_height - 40, "Owner Signature")
+    p.setFont(NORMAL_FONT, 12)
+    p.drawString(
+        ttd_base_x,
+        ttd_base_y - (row_height * 5),
+        f"(.................................................................)",
+    )
 
     p.save()
 
