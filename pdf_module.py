@@ -174,6 +174,23 @@ def generate_pdf(invoice_data):
         f"(.................................................................)",
     )
 
+    # Pembayaran
+    byr_base_x = x
+    byr_base_y = ttd_base_y - (row_height * 4)
+
+    p.setFont(BOLD_FONT, 12)
+    p.drawString(
+        byr_base_x, byr_base_y,
+        "Informasi Pembayaran"
+    )
+    p.setFont(NORMAL_FONT, 12)
+    p.drawString(
+        byr_base_x, byr_base_y - row_height,
+        "BCA a.n. Ivan Leonardo - 0845248007"
+    )
+
+
+
     p.save()
 
     # Move the buffer position to the beginning
