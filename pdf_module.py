@@ -319,7 +319,7 @@ def convert_to_terbilang(number):
 
         # Handle digit in hundreds place
         if num >= 100:
-            if num == 100:
+            if num >= 100 and num < 200:
                 result += "SERATUS "
             else:
                 result += satuan[num // 100] + " RATUS "
