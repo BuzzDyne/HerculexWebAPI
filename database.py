@@ -23,6 +23,8 @@ OrderComment_TH = Base.classes.ordercomment_th
 OrderBatchfile_TM = Base.classes.orderbatchfile_tm
 OrderDocument_TM = Base.classes.orderdocument_tm
 OrderDocumentItem_TR = Base.classes.orderdocumentitem_tr
+OrderankuItem_TM = Base.classes.orderanku_item_tm
+OrderankuSeller_TR = Base.classes.orderanku_seller_tr
 
 
 def get_db():
