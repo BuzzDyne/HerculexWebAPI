@@ -7,7 +7,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 doc_type_mapping = {"Q": "QUO", "I": "INV"}
-CAP_IMAGE_PATH = "res/CapTTD.png"
+CAP_IMAGE_PATH = "res/CapTTD.webp"
 NORMAL_FONT = "MyPoppin"
 BOLD_FONT = "MyPoppin-Bold"
 ITALIC_FONT = "MyPoppin-Italic"
