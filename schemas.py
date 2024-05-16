@@ -214,3 +214,14 @@ class OrderDocument(BaseModel):
     due_date: str
     items: List[OrderDocumentItem]
     discount: float
+
+
+class OrderankuSeller(BaseModel):
+    id: Optional[int]
+    seller_name: str
+    seller_phone: str
+
+
+class OrderankuSellerEditForm(BaseModel):
+    seller_name: Optional[str]
+    seller_phone: Optional[str]
