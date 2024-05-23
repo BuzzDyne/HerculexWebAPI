@@ -225,3 +225,17 @@ class OrderankuSeller(BaseModel):
 class OrderankuSellerEditForm(BaseModel):
     seller_name: Optional[str]
     seller_phone: Optional[str]
+
+
+# class OrderankuItemFilter(BaseModel):
+#     id: Optional[str]
+#     created_date_from: Optional[str]
+#     created_date_to: Optional[str]
+#     recipient_name: Optional[str]
+#     recipient_addr: Optional[str]
+#     total_from: Optional[float]
+#     total_to: Optional[float]
+#     has_printed: Optional[bool]
+#     has_paid: Optional[bool]
+#     seller_name: Optional[str]
+#     seller_phone: Optional[str]
