@@ -227,15 +227,29 @@ class OrderankuSellerEditForm(BaseModel):
     seller_phone: Optional[str]
 
 
-# class OrderankuItemFilter(BaseModel):
-#     id: Optional[str]
-#     created_date_from: Optional[str]
-#     created_date_to: Optional[str]
-#     recipient_name: Optional[str]
-#     recipient_addr: Optional[str]
-#     total_from: Optional[float]
-#     total_to: Optional[float]
-#     has_printed: Optional[bool]
-#     has_paid: Optional[bool]
-#     seller_name: Optional[str]
-#     seller_phone: Optional[str]
+class OrderankuItemCreateForm(BaseModel):
+    recipient_name: str
+    recipient_provinsi: Optional[str]
+    recipient_kota_kab: Optional[str]
+    recipient_kecamatan: Optional[str]
+    recipient_kelurahan: Optional[str]
+    recipient_address: str
+    order_details: str
+    order_total: str
+    seller_name: Optional[str]
+    seller_phone: Optional[str]
+
+
+class OrderankuItemEditForm(BaseModel):
+    recipient_name: Optional[str] = None
+    recipient_provinsi: Optional[str] = None
+    recipient_kota_kab: Optional[str] = None
+    recipient_kecamatan: Optional[str] = None
+    recipient_kelurahan: Optional[str] = None
+    recipient_address: Optional[str] = None
+    order_details: Optional[str] = None
+    order_total: Optional[str] = None
+    seller_name: Optional[str] = None
+    seller_phone: Optional[str] = None
+    clear_paid: Optional[bool] = False
+    clear_print: Optional[bool] = False

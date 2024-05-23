@@ -7,7 +7,12 @@ from pdf_module import generate_pdf
 from datetime import datetime
 from math import ceil
 
-from schemas import OrderankuSeller, OrderankuSellerEditForm
+from schemas import (
+    OrderankuSeller,
+    OrderankuSellerEditForm,
+    OrderankuItemCreateForm,
+    OrderankuItemEditForm,
+)
 
 from database import get_db, OrderankuItem_TM, OrderankuSeller_TR
 
@@ -150,6 +155,133 @@ def get_orders(
             }
             for result in results
         ],
+    }
+
+
+@router.post("/order")
+def create_order(
+    payload: OrderankuItemCreateForm,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    new_seller = None
+    Authorize.jwt_required()
+
+    # region Handle New Seller
+    seller = (
+        db.query(OrderankuSeller_TR)
+        .filter(OrderankuSeller_TR.seller_name == payload.seller_name)
+        .filter(OrderankuSeller_TR.seller_phone == payload.seller_phone)
+        .first()
+    )
+
+    if not seller:
+        new_seller = OrderankuSeller_TR(
+            seller_name=payload.seller_name, seller_phone=payload.seller_phone
+        )
+        db.add(new_seller)
+        db.commit()
+        db.refresh(new_seller)
+
+    # endregion
+
+    # region Validate Data
+    # endregion
+
+    new_orderanku = OrderankuItem_TM(
+        recipient_name=payload.recipient_name,
+        recipient_provinsi=payload.recipient_provinsi,
+        recipient_kota_kab=payload.recipient_kota_kab,
+        recipient_kecamatan=payload.recipient_kecamatan,
+        recipient_kelurahan=payload.recipient_kelurahan,
+        recipient_address=payload.recipient_address,
+        order_details=payload.order_details,
+        order_total=payload.order_total,
+        created_date=datetime.now(),
+        seller_name=payload.seller_name,
+        seller_phone=payload.seller_phone,
+        is_active=1,
+    )
+
+    db.add(new_orderanku)
+    db.commit()
+    db.refresh(new_orderanku)
+
+    return {
+        "msg": "Success create Order",
+        "new_seller_created": (
+            None
+            if not new_seller
+            else {
+                "seller_name": new_seller.seller_name,
+                "seller_phone": new_seller.seller_phone,
+            }
+        ),
+        "data": new_orderanku,
+    }
+
+
+@router.patch("/order/id/{id}")
+def edit_order(
+    id: str,
+    payload: OrderankuItemEditForm,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    new_seller = None
+    Authorize.jwt_required()
+
+    order = db.query(OrderankuItem_TM).filter(OrderankuItem_TM.id == id).first()
+
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Order ID ({id}) not found",
+        )
+
+    # region Handle New Seller
+    seller = (
+        db.query(OrderankuSeller_TR)
+        .filter(OrderankuSeller_TR.seller_name == payload.seller_name)
+        .filter(OrderankuSeller_TR.seller_phone == payload.seller_phone)
+        .first()
+    )
+
+    if not seller:
+        new_seller = OrderankuSeller_TR(
+            seller_name=payload.seller_name, seller_phone=payload.seller_phone
+        )
+        db.add(new_seller)
+        db.commit()
+        db.refresh(new_seller)
+    # endregion
+
+    update_data = payload.dict(exclude_unset=True)
+
+    for key, value in update_data.items():
+        if key not in ["clear_paid", "clear_print"]:
+            setattr(order, key, value)
+
+    if payload.clear_paid:
+        order.paid_date = None
+
+    if payload.clear_print:
+        order.print_date = None
+
+    db.commit()
+    db.refresh(order)
+
+    return {
+        "msg": f"Update Order ID ({id}) successful",
+        "new_seller_created": (
+            None
+            if not new_seller
+            else {
+                "seller_name": new_seller.seller_name,
+                "seller_phone": new_seller.seller_phone,
+            }
+        ),
+        "data": order,
     }
 
 
