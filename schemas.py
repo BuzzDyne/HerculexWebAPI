@@ -253,3 +253,7 @@ class OrderankuItemEditForm(BaseModel):
     seller_phone: Optional[str] = None
     clear_paid: Optional[bool] = False
     clear_print: Optional[bool] = False
+
+
+class OrderankuBatchPrint(BaseModel):
+    order_ids: List[int]

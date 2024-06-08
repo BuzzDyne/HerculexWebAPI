@@ -1,16 +1,13 @@
-import os
 import time
 import random
 import string
+import datetime
 from io import BytesIO
-from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
-from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from pdf417 import encode, render_image
-from PIL import Image
 
 doc_type_mapping = {"Q": "QUO", "I": "INV"}
 CAP_IMAGE_PATH = "res/CapTTD.png"
@@ -19,172 +16,65 @@ BOLD_FONT = "Reddit-Black"
 ITALIC_FONT = "MyPoppin-Italic"
 
 
-def generate_invoice_number(invoice_id, doc_type):
-    # Get the current year and month
-    now = datetime.now()
-    year = now.year
-    month = now.strftime("%m")  # Get the month in numerical format
-
-    # Convert month to Roman numerals
-    roman_numerals = [
-        "",
-        "I",
-        "II",
-        "III",
-        "IV",
-        "V",
-        "VI",
-        "VII",
-        "VIII",
-        "IX",
-        "X",
-        "XI",
-        "XII",
-    ]
-    roman_month = roman_numerals[int(month)]
-    shorthand_doc = doc_type_mapping.get(doc_type, "OTH")
-
-    # Generate the invoice number
-    invoice_number = f"HCX/{shorthand_doc}/{year}/{roman_month}/{invoice_id}"
-
-    return invoice_number
-
-
 def format_number_with_commas(number):
+    """
+    Format a number with commas as thousands separators.
+
+    Parameters
+    ----------
+    number : int or float
+        The number to be formatted.
+
+    Returns
+    -------
+    str
+        A string representing the formatted number with commas as thousands separators.
+
+    Examples
+    --------
+    >>> format_number_with_commas(1000)
+    '1,000'
+    >>> format_number_with_commas(1000000)
+    '1,000,000'
+    >>> format_number_with_commas(1234567890)
+    '1,234,567,890'
+    """
     formatted_number = "{:,}".format(number)
     return formatted_number
 
 
-def capitalize_words(input_string, max_length=60):
-    # Define the delimiters
-    delimiters = [" ", "/", ",", "-"]
-
-    # Split the input string into words using any of the delimiters
-    words = []
-    current_word = ""
-    current_delimiter = ""
-
-    for char in input_string:
-        if char in delimiters:
-            if current_word:
-                words.append(current_word)
-                current_word = ""
-            current_delimiter = char
-        else:
-            current_word += char
-
-    if current_word:
-        words.append(current_word)
-
-    # Capitalize each word and join them back into a string using the original delimiters
-    result_string = current_delimiter.join(word.capitalize() for word in words)
-
-    # Check if the resulting string exceeds the maximum length
-    if len(result_string) > max_length:
-        # Find the last space within the limit
-        last_space_index = max_length
-        while last_space_index > 0 and result_string[last_space_index] != " ":
-            last_space_index -= 1
-
-        # Trim the string to the last space within the limit
-        result_string = result_string[:last_space_index].rstrip()
-
-    return result_string
-
-
-def convert_to_terbilang(number):
-    # Define the words for each digit
-    satuan = [
-        "",
-        "SATU",
-        "DUA",
-        "TIGA",
-        "EMPAT",
-        "LIMA",
-        "ENAM",
-        "TUJUH",
-        "DELAPAN",
-        "SEMBILAN",
-    ]
-    belasan = [
-        "",
-        "SEBELAS",
-        "DUA BELAS",
-        "TIGA BELAS",
-        "EMPAT BELAS",
-        "LIMA BELAS",
-        "ENAM BELAS",
-        "TUJUH BELAS",
-        "DELAPAN BELAS",
-        "SEMBILAN BELAS",
-    ]
-    puluhan = [
-        "",
-        "SEPULUH",
-        "DUA PULUH",
-        "TIGA PULUH",
-        "EMPAT PULUH",
-        "LIMA PULUH",
-        "ENAM PULUH",
-        "TUJUH PULUH",
-        "DELAPAN PULUH",
-        "SEMBILAN PULUH",
-    ]
-
-    # Function to convert a group of three digits into words
-    def convert_group_of_three(num):
-        result = ""
-
-        # Ensure num is an integer
-        num = int(num)
-
-        # Handle digit in hundreds place
-        if num >= 100:
-            if num >= 100 and num < 200:
-                result += "SERATUS "
-            else:
-                result += satuan[num // 100] + " RATUS "
-            num %= 100
-
-        # Handle digit in tens and ones place
-        if num >= 10:
-            if num < 20:
-                result += belasan[num - 10] + " "
-                num = 0  # Set num to 0 to avoid processing the ones place
-            else:
-                result += puluhan[num // 10] + " "
-                num %= 10
-
-        # Handle digit in ones place
-        if num > 0:
-            result += satuan[num] + " "
-
-        return result
-
-    # Convert the given number into "Terbilang"
-    terbilang_result = ""
-    if number == 0:
-        terbilang_result = "NOL"
-    else:
-        groups = []
-        while number > 0:
-            groups.append(number % 1000)
-            number //= 1000
-
-        for i in range(len(groups) - 1, -1, -1):
-            if groups[i] != 0:
-                terbilang_result += convert_group_of_three(groups[i])
-
-                # Append the unit (RIBU, JUTA, MILYAR) only if it's not the last group
-                if i > 0:
-                    terbilang_result += ["", "RIBU ", "JUTA ", "MILYAR "][i]
-
-    terbilang_result += "RUPIAH"
-
-    return split_string(terbilang_result.strip())
-
-
 def split_string(input_string, max_length=70, br_token="~!~"):
+    """
+    Split the input string into lines based on the maximum length.
+
+    Parameters
+    ----------
+    input_string : str
+        The input string to be split into lines.
+    max_length : int, optional
+        The maximum length of each line (default is 70).
+    br_token : str, optional
+        The token used to indicate line breaks within the input string (default is "~!~").
+
+    Returns
+    -------
+    list of str
+        A list of strings representing the lines after splitting the input string.
+
+    Notes
+    -----
+    This function splits the input string into lines based on the maximum length specified.
+    The input string may contain line breaks indicated by the br_token.
+    Each segment separated by the br_token is split into words, and then concatenated into lines.
+    If a word exceeds the maximum length, it is split into multiple lines.
+
+    Examples
+    --------
+    >>> split_string("This is a long string that needs to be split into multiple lines.", max_length=20)
+    ['This is a long string', 'that needs to be split', 'into multiple lines.']
+    >>> split_string("Line 1~!~Line 2~!~Line 3", br_token="~!~")
+    ['Line 1', 'Line 2', 'Line 3']
+    """
     # Split the input string by the special token
     segments = input_string.split(br_token)
     result_list = []
@@ -206,66 +96,42 @@ def split_string(input_string, max_length=70, br_token="~!~"):
     return result_list
 
 
-def print_sample_pdf():
-    pdfmetrics.registerFont(TTFont("Reddit-Black", "res/fonts/RedditMono-Black.ttf"))
-    pdfmetrics.registerFont(TTFont("Reddit-Medium", "res/fonts/RedditMono-Medium.ttf"))
-
-    # Generate PDF using ReportLab
-    ts = int(time.time())
-    pdf_buffer = BytesIO()
-    p = canvas.Canvas(pdf_buffer, pagesize=A4)
-    row_height = 20
-    width, height = A4
-
-    p.setTitle(ts)
-
-    p.setFont(NORMAL_FONT, 10)
-    p.setFillColorRGB(0.20784313725490197, 0.1843137254901961, 0.21176470588235294)
-
-    # 106 Char
-    p.drawString(0, 0, "123")
-    p.drawString(width / 2, height / 2, "123123123123123123123123")
-
-    # Finish the first page and start a new one
-    p.showPage()
-
-    # Add content to the second page
-    p.drawString(100, 100, "This is the second page")
-
-    # Save the PDF to the current working directory
-    p.save()
-    pdf_buffer.seek(0)
-    with open(os.path.join(os.getcwd(), f"{ts}.pdf"), "wb") as f:
-        f.write(pdf_buffer.getbuffer())
-
-
 def process_invoice_item_rows(inv_data):
     """
-    Processes invoice data to map various invoice components to their respective
-    positions within a predefined layout. It ensures that each item (such as recipient
-    name, address, and order details) fits within the specified maximum lengths for the
-    left and right columns of the invoice layout.
+    Process invoice item rows based on the provided invoice data.
 
-    Args:
-        inv_data (dict): A dictionary containing invoice details with the following keys:
-            - receipent_name (str): The name of the recipient.
-            - receipent_telp (str): The telephone number of the recipient.
-            - receipent_addr (str): The address of the recipient.
-            - sender_name (str): The name of the sender.
-            - sender_telp (str): The telephone number of the sender.
-            - total_amount (float): The total amount of the invoice.
-            - bank_name (str): The name of the bank (optional).
-            - order_detail (str): Details of the order.
+    Parameters
+    ----------
+    inv_data : dict
+        A dictionary containing invoice data with the following keys:
+        - 'receipent_name': str, the recipient's name.
+        - 'receipent_telp': str, the recipient's telephone number.
+        - 'receipent_addr': str, the recipient's address.
+        - 'sender_name': str, the sender's name.
+        - 'sender_telp': str, the sender's telephone number.
+        - 'total_amount': float, the total amount of the invoice.
+        - 'bank_name': str, the name of the bank (optional).
+        - 'order_detail': str, details of the order.
 
-    Returns:
-        tuple: A tuple containing:
-            - item_mapping (dict): A dictionary where each key represents a component
-              of the invoice and each value is a dictionary with:
-                - start_index_row (int): The starting row index for this component.
-                - lines (list of str): The lines of text for this component, split to fit
-                  within the column width.
-            - max_row_count (int): The maximum number of rows required to fit all components,
-              ensuring a minimum row count of 13.
+    Returns
+    -------
+    tuple
+        A tuple containing:
+        - A dictionary mapping item keys to their respective rows and lines.
+        - The maximum number of rows required for the invoice.
+
+    Notes
+    -----
+    This function processes the invoice item rows by splitting the provided data into left and right columns
+    and determining the number of rows required based on the content.
+
+    The left column contains recipient information (name, telephone, address) and sender information (name, telephone).
+    The right column contains the total amount, bank name (if available), and order details.
+
+    The minimum number of rows required is determined by the MIN_ROWS constant.
+    The maximum length of lines in the left column is determined by L_MAX_LENGTH constant.
+    The maximum length of lines in the right column is determined by R_MAX_LENGTH constant.
+
     """
     MIN_ROWS = 13
     L_MAX_LENGTH = 37
@@ -278,33 +144,33 @@ def process_invoice_item_rows(inv_data):
 
     data_rows = split_string(inv_data["receipent_name"], L_MAX_LENGTH)
     item_mapping["r_name"] = {
-        "start_index_row": curr_row,
+        "iRow": curr_row,
         "lines": data_rows,
     }
 
     curr_row += max(len(data_rows), 1)
     item_mapping["r_telp"] = {
-        "start_index_row": curr_row,
+        "iRow": curr_row,
         "lines": [inv_data["receipent_telp"]],
     }
 
     curr_row += 1
     data_rows = split_string(inv_data["receipent_addr"], L_MAX_LENGTH)
     item_mapping["r_addr"] = {
-        "start_index_row": curr_row,
+        "iRow": curr_row,
         "lines": data_rows,
     }
 
     curr_row += max(len(data_rows), 1)
     data_rows = split_string(inv_data["sender_name"], L_MAX_LENGTH)
     item_mapping["s_name"] = {
-        "start_index_row": curr_row,
+        "iRow": curr_row,
         "lines": data_rows,
     }
 
     curr_row += max(len(data_rows), 1)
     item_mapping["s_telp"] = {
-        "start_index_row": curr_row,
+        "iRow": curr_row,
         "lines": [inv_data["sender_telp"]],
     }
 
@@ -319,179 +185,298 @@ def process_invoice_item_rows(inv_data):
         totalText += f" - {inv_data['bank_name']}"
 
     item_mapping["d_total"] = {
-        "start_index_row": curr_row,
+        "iRow": curr_row,
         "lines": [totalText],
     }
 
     curr_row += 2
     data_rows = split_string(inv_data["order_detail"], R_MAX_LENGTH)
     item_mapping["d_detail"] = {
-        "start_index_row": curr_row,
+        "iRow": curr_row,
         "lines": data_rows,
     }
 
     r_row_count = curr_row + len(data_rows) - 1
     # endregion
 
+    l_row_count = l_row_count + 1 if l_row_count >= MIN_ROWS else l_row_count
+    r_row_count = r_row_count + 1 if r_row_count >= MIN_ROWS else r_row_count
+
     return item_mapping, max(MIN_ROWS, l_row_count, r_row_count)
 
 
-def generate_orderanku(data):
-    pdfmetrics.registerFont(TTFont("Reddit-Black", "res/fonts/RedditMono-Black.ttf"))
-    pdfmetrics.registerFont(TTFont("Reddit-Medium", "res/fonts/RedditMono-Medium.ttf"))
+def generate_id_header(order_id=5001):
+    """
+    Generate a formatted order ID header.
 
-    # Generate PDF using ReportLab
-    pdf_buffer = BytesIO()
-    p = canvas.Canvas(pdf_buffer, pagesize=A4)
+    Parameters
+    ----------
+    order_id : int, optional
+        The order ID integer part (default is 5001).
 
-    # region Calculate Invoice Height
+    Returns
+    -------
+    str
+        A string representing the formatted order ID header, which consists of:
+        - Three random uppercase letters.
+        - A hyphen.
+        - The integer part of the order ID, with leading zeros to ensure it is at least 4 characters long.
 
-    # endregion
+    Examples
+    --------
+    >>> generate_id_header(123)
+    'XX-0123'
+    >>> generate_id_header()
+    'XX-5001'
+    """
+    # Generate three random uppercase letters
+    random_letters = "".join(random.choices(string.ascii_uppercase, k=2))
 
-    # region Definitions
+    # Ensure the integer part is at least 4 characters long with leading zeros
+    formatted_order_id = f"{order_id:04d}"
+
+    # Combine the parts with a hyphen
+    oid_str = f"{random_letters}-{formatted_order_id}"
+
+    return oid_str
+
+
+def generate_orderanku(data_arr):
+    """
+    Generate a PDF document with order details and barcodes for a list of orders.
+
+    Parameters:
+    -----------
+    data_arr : list of dict
+        A list of dictionaries, where each dictionary contains order details.
+        Each dictionary should have the following keys:
+        - orderanku_id: str
+            Unique identifier for the order.
+        - receipent_name: str
+            Name of the recipient.
+        - receipent_telp: str
+            Telephone number of the recipient.
+        - receipent_addr: str
+            Address of the recipient.
+        - sender_name: str
+            Name of the sender.
+        - sender_telp: str
+            Telephone number of the sender.
+        - paid_flag: bool
+            Flag indicating if the order is paid.
+        - invoice_date: str
+            Invoice date in the format "yyyy-mm-dd HH:MM:SS".
+        - total_amount: int
+            Total amount of the order.
+        - order_detail: str
+            Order details in a specific format.
+
+    Returns:
+    --------
+    pdf_buffer (BytesIO): A buffer containing the PDF data.
+    """
     UNIT = 12
-    width, height = A4
-    MID_X = width / 2
+    A4_width, A4_height = A4
+    MID_X = A4_width / 2
     BARCODE_W = 100 / 2
     BARCODE_H = 350 / 2
     TEXT_LEV = 3.3
 
-    table_rows = 16  # Need to be calculated
-    top_y = height - UNIT
-    bot_y = height - (table_rows * UNIT)
+    pdfmetrics.registerFont(TTFont("Reddit-Black", "res/fonts/RedditMono-Black.ttf"))
+    pdfmetrics.registerFont(TTFont("Reddit-Medium", "res/fonts/RedditMono-Medium.ttf"))
 
-    left_top = (2 * UNIT, top_y)
-    left_bot = (2 * UNIT, bot_y)
-    right_top = (width - 2 * UNIT, top_y)
-    right_bot = (width - 2 * UNIT, bot_y)
-    mid_top = (MID_X, top_y)
-    mid_bot = (MID_X, bot_y)
+    pdf_buffer = BytesIO()
+    p = canvas.Canvas(pdf_buffer, pagesize=A4)
 
-    p.setFont(NORMAL_FONT, 8)
-    p.setFillColorRGB(0, 0, 0)
-    p.setStrokeColorRGB(0.25, 0.25, 0.25)
-    # endregion
+    curr_caret_y = A4_height
+    for data in data_arr:
+        # region Definitions
 
-    # region Create Table
-    # Vertical Lines
-    p.line(*mid_top, *mid_bot)
-    p.line(*left_top, *left_bot)
-    p.line(*right_top, *right_bot)
+        data_map, data_row_count = process_invoice_item_rows(data)
+        area_rows = data_row_count + 3  # top-padding, header, spacing
 
-    # Horizontal Lines
-    p.line(*left_top, *right_top)
-    p.line(*left_bot, *right_bot)
+        if curr_caret_y - (area_rows * UNIT) <= 0:
+            p.showPage()
+            curr_caret_y = A4_height
 
-    # Subheader
-    sub_x1 = MID_X - 5
-    sub_x2 = right_top[0] - 5
-    sub_y = top_y - UNIT + TEXT_LEV
+        table_top_y = curr_caret_y - UNIT
+        table_bot_y = table_top_y - ((data_row_count + 2) * UNIT)
 
-    lunas_str = "LUNAS" if data["paid_flag"] else "BELUM LUNAS"
-    oid_str = data["orderanku_id"]
+        left_top = (2 * UNIT, table_top_y)
+        left_bot = (2 * UNIT, table_bot_y)
+        right_top = (A4_width - 2 * UNIT, table_top_y)
+        right_bot = (A4_width - 2 * UNIT, table_bot_y)
+        mid_top = (MID_X, table_top_y)
+        mid_bot = (MID_X, table_bot_y)
 
-    subheader_text = f"{lunas_str} (ORDER {oid_str}) 2024-12-31"
+        p.setFont(NORMAL_FONT, 8)
+        p.setFillColorRGB(0, 0, 0)
+        p.setStrokeColorRGB(0.25, 0.25, 0.25)
+        # endregion
 
-    p.drawRightString(sub_x1, sub_y, subheader_text)
-    p.drawRightString(sub_x2, sub_y, subheader_text)
-    # endregion
+        # region Create Table
+        # Vertical Lines
+        p.line(*mid_top, *mid_bot)
+        p.line(*left_top, *left_bot)
+        p.line(*right_top, *right_bot)
 
-    # Helper Line
-    for i in range(1, table_rows - 2):
-        row_y = top_y - ((2 + i) * UNIT)
-        p.line(left_top[0], row_y, right_top[0], row_y)
-        p.drawString(MID_X - 10, row_y + TEXT_LEV, f"{i}")
+        # Horizontal Lines
+        p.line(*left_top, *right_top)
+        p.line(*left_bot, *right_bot)
 
-    # region Barcodes
-    # Generate the barcode image
-    barcode_image = create_pdf417_barcode(data["receipent_name"])
+        # Subheader
+        sub_x1 = MID_X - 5
+        sub_x2 = right_top[0] - 5
+        sub_y = table_top_y - UNIT + TEXT_LEV
 
-    # Draw the barcode (Left)
-    barcode_x = left_bot[0] + 2
-    barcode_y = left_bot[1] + 3  # Adjust the y pos
+        lunas_str = "LUNAS" if data["paid_flag"] else "BELUM LUNAS"
+        oid_str = generate_id_header(data["orderanku_id"])
+        date_str = (
+            data["invoice_date"][:10]
+            if data["invoice_date"]
+            else datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        )
 
-    p.drawInlineImage(
-        barcode_image, barcode_x, barcode_y, width=BARCODE_W, height=BARCODE_H
-    )
+        subheader_text = f"{lunas_str} (ORDER {oid_str}) {date_str}"
 
-    barcode_line_x_1 = barcode_x + BARCODE_W + 2
-    p.line(barcode_line_x_1, left_bot[1], barcode_line_x_1, left_top[1])
+        p.drawRightString(sub_x1, sub_y, subheader_text)
+        p.drawRightString(sub_x2, sub_y, subheader_text)
+        # endregion
 
-    # Draw the barcode (Right)
-    barcode_x = mid_bot[0] + 2
-    barcode_y = mid_bot[1] + 3  # Adjust the y pos
+        # region Helper Line
+        # for i in range(1, area_rows - 2):
+        #     row_y = table_top_y - ((2 + i) * UNIT)
+        #     p.line(left_top[0], row_y, right_top[0], row_y)
+        #     p.drawString(MID_X - 10, row_y + TEXT_LEV, f"{i}")
+        # endregion
+        # region Barcodes
+        # Generate the barcode image
+        text_encode = f"{data['orderanku_id']}~^~{data['receipent_name']}~^~{data['receipent_telp']}~^~{data['receipent_addr']}~^~{data['sender_name']}~^~{data['sender_telp']}"
+        barcode_image = create_pdf417_barcode(text_encode)
 
-    p.drawInlineImage(
-        barcode_image, barcode_x, barcode_y, width=BARCODE_W, height=BARCODE_H
-    )
-    barcode_line_x_2 = barcode_x + BARCODE_W + 2
-    p.line(barcode_line_x_2, bot_y, barcode_line_x_2, top_y)
-    # endregion
+        # Draw the barcode (Left)
+        barcode_x = left_top[0] + 2
+        barcode_y = left_top[1] - BARCODE_H - 2 - (((data_row_count - 13) / 2) * UNIT)
 
-    # region Data Header
-    p.setFont(BOLD_FONT, 8)
-    dh_x_l = barcode_line_x_1 + 5
-    colon_x_l = dh_x_l + 37
-    base_text_y = left_top[1] - (2 * UNIT) + TEXT_LEV
+        p.drawInlineImage(
+            barcode_image, barcode_x, barcode_y, width=BARCODE_W, height=BARCODE_H
+        )
 
-    p.drawString(dh_x_l, base_text_y - (1 * UNIT), "Kepada")
-    p.drawString(dh_x_l, base_text_y - (2 * UNIT), "Telp")
-    p.drawString(dh_x_l, base_text_y - (3 * UNIT), "Alamat")
-    p.drawString(dh_x_l, base_text_y - (5 * UNIT), "Pengirim")
-    p.drawString(dh_x_l, base_text_y - (6 * UNIT), "Telp")
+        barcode_line_x_1 = barcode_x + BARCODE_W + 2
+        p.line(barcode_line_x_1, left_bot[1], barcode_line_x_1, left_top[1])
 
-    p.drawString(colon_x_l, base_text_y - (1 * UNIT), ":")
-    p.drawString(colon_x_l, base_text_y - (2 * UNIT), ":")
-    p.drawString(colon_x_l, base_text_y - (3 * UNIT), ":")
-    p.drawString(colon_x_l, base_text_y - (5 * UNIT), ":")
-    p.drawString(colon_x_l, base_text_y - (6 * UNIT), ":")
+        # Draw the barcode (Right)
+        barcode_x = mid_top[0] + 2
 
-    p.setFont(NORMAL_FONT, 8)  # Max Length for data 37 char
-    p.drawString(colon_x_l + 5, base_text_y - (1 * UNIT), f"{data['receipent_name']}")
-    p.drawString(colon_x_l + 5, base_text_y - (2 * UNIT), f"{data['receipent_telp']}")
-    p.drawString(colon_x_l + 5, base_text_y - (3 * UNIT), f"{data['receipent_addr']}")
-    p.drawString(colon_x_l + 5, base_text_y - (5 * UNIT), f"{data['sender_name']}")
-    p.drawString(colon_x_l + 5, base_text_y - (6 * UNIT), f"{data['sender_telp']}")
+        p.drawInlineImage(
+            barcode_image, barcode_x, barcode_y, width=BARCODE_W, height=BARCODE_H
+        )
+        barcode_line_x_2 = barcode_x + BARCODE_W + 2
+        p.line(barcode_line_x_2, table_bot_y, barcode_line_x_2, table_top_y)
+        # endregion
 
-    dh_x_2 = barcode_line_x_2 + 5
-    colon_x_2 = dh_x_2 + 32
+        # region Data
+        p.setFont(BOLD_FONT, 8)
+        dh_x_l = barcode_line_x_1 + 5
+        colon_x_l = dh_x_l + 37
+        base_text_y = left_top[1] - (2 * UNIT) + TEXT_LEV
 
-    p.setFont(BOLD_FONT, 8)
-    p.drawString(dh_x_2, base_text_y - (1 * UNIT), "Total")
-    p.drawString(dh_x_2, base_text_y - (2 * UNIT), "Pesanan")
+        p.drawString(
+            dh_x_l, base_text_y - (data_map["r_name"]["iRow"] * UNIT), "Kepada"
+        )
+        p.drawString(dh_x_l, base_text_y - (data_map["r_telp"]["iRow"] * UNIT), "Telp")
+        p.drawString(
+            dh_x_l, base_text_y - (data_map["r_addr"]["iRow"] * UNIT), "Alamat"
+        )
+        p.drawString(
+            dh_x_l, base_text_y - (data_map["s_name"]["iRow"] * UNIT), "Pengirim"
+        )
+        p.drawString(dh_x_l, base_text_y - (data_map["s_telp"]["iRow"] * UNIT), "Telp")
 
-    p.drawString(colon_x_2, base_text_y - (1 * UNIT), ":")
-    p.drawString(colon_x_2, base_text_y - (2 * UNIT), ":")
+        p.drawString(colon_x_l, base_text_y - (data_map["r_name"]["iRow"] * UNIT), ":")
+        p.drawString(colon_x_l, base_text_y - (data_map["r_telp"]["iRow"] * UNIT), ":")
+        p.drawString(colon_x_l, base_text_y - (data_map["r_addr"]["iRow"] * UNIT), ":")
+        p.drawString(colon_x_l, base_text_y - (data_map["s_name"]["iRow"] * UNIT), ":")
+        p.drawString(colon_x_l, base_text_y - (data_map["s_telp"]["iRow"] * UNIT), ":")
 
-    p.setFont(NORMAL_FONT, 8)
-    totalText = f"Rp {format_number_with_commas(data['total_amount'])}"
-    if data["bank_name"]:
-        totalText += f" - {data['bank_name']}"
+        p.setFont(NORMAL_FONT, 8)  # Max Length for data 37 char
 
-    p.drawString(colon_x_2 + 5, base_text_y - (1 * UNIT), totalText)
-    p.drawString(colon_x_2 + 5, base_text_y - (2 * UNIT), f"{data['order_detail']}")
-    p.drawString(dh_x_2, base_text_y - (3 * UNIT), f"{data['order_detail']}")
+        left_row_data = ["r_name", "r_telp", "r_addr", "s_name", "s_telp"]
 
-    # endregion
+        data_x = colon_x_l + 5
 
-    # Save the PDF to the current working directory
+        for key in left_row_data:
+            start_row = data_map[key]["iRow"]
+            for i, line in enumerate(data_map[key]["lines"]):
+                row = start_row + i
+                p.drawString(data_x, base_text_y - (row * UNIT), line)
+
+        dh_x_2 = barcode_line_x_2 + 5
+        colon_x_2 = dh_x_2 + 32
+
+        p.setFont(BOLD_FONT, 8)
+        p.drawString(dh_x_2, base_text_y - (1 * UNIT), "Total")
+        p.drawString(dh_x_2, base_text_y - (2 * UNIT), "Pesanan")
+        p.drawString(colon_x_2, base_text_y - (1 * UNIT), ":")
+        p.drawString(colon_x_2, base_text_y - (2 * UNIT), ":")
+
+        p.setFont(NORMAL_FONT, 8)
+        data_x = colon_x_2 + 5
+        p.drawString(data_x, base_text_y - (1 * UNIT), data_map["d_total"]["lines"][0])
+
+        for i, line in enumerate(data_map["d_detail"]["lines"]):
+            row = data_map["d_detail"]["iRow"] + i
+            p.drawString(dh_x_2, base_text_y - (row * UNIT), line)
+
+        # endregion
+        curr_caret_y -= area_rows * UNIT  # Move the Caret
+
     p.save()
     pdf_buffer.seek(0)
-    with open(os.path.join(os.getcwd(), f"{int(time.time())}.pdf"), "wb") as f:
-        f.write(pdf_buffer.getbuffer())
+    filename = f"{int(time.time())}.pdf"
+
+    return pdf_buffer
+    # with open(os.path.join(os.getcwd(), filename), "wb") as f:
+    #     f.write(pdf_buffer.getbuffer())
 
 
 def create_pdf417_barcode(data_str):
+    """
+    Create a PDF417 barcode image from the provided data string.
+
+    Parameters
+    ----------
+    data_str : str
+        The data string to be encoded in the barcode.
+
+    Returns
+    -------
+    PIL.Image.Image
+        A PIL Image object representing the generated PDF417 barcode.
+
+    Notes
+    -----
+    This function generates a PDF417 barcode image from the provided data string.
+    The barcode image is initially rendered with a scale of 10 and a ratio of 1.
+    If the length of the data string exceeds 790 characters, it is truncated.
+    If the length of the data string is less than 300 characters, it is padded with random alphabets
+    followed by the "~EOF~" token to ensure a minimum length of 300 characters.
+    The final barcode image is resized to fit the target dimensions of 350x100 pixels
+    and rotated 90 degrees clockwise.
+
+    """
     # Hardcoded dimensions for the output image
     target_width = 350
     target_height = 100
+    MAX_LEN = 790
+    MIN_LEN = 300
 
     # Truncate data_str to the first 790 characters if necessary
-    if len(data_str) > 790:
-        data_str = data_str[:790]
+    if len(data_str) > MAX_LEN:
+        data_str = data_str[:MAX_LEN]
     # Ensure data_str is at least 6 characters long
-    if len(data_str) < 300:
-        remaining_length = 300 - len(data_str)
+    if len(data_str) < MIN_LEN:
+        remaining_length = MIN_LEN - len(data_str)
         random_alphabets = "".join(
             random.choice(string.ascii_lowercase) for _ in range(remaining_length)
         )
@@ -515,44 +500,96 @@ def create_pdf417_barcode(data_str):
     return rotated_image
 
 
-if __name__ == "__main__":
-    invoice_data = {
-        "doc_type": "INV",  # 'Q' for quotation or 'INV' for invoice
-        "customer_name": "John Doe",
-        "customer_addr_1": "123 Main St",
-        "customer_addr_2": "Apt 4B",
-        "customer_addr_3": "Springfield",
-        "customer_addr_4": "IL, 62701",
-        "cust_phone": "555-1234",
-        "cust_fax": "555-5678",
-        "due_date": "2024-06-30",
-        "doc_number": "INV-2024-0001",
-        "items": [
-            {"item_name": "Widget A", "price": 1000, "quantity": 2},
-            {"item_name": "Widget B", "price": 1500, "quantity": 3},
-            {"item_name": "Service Fee", "price": 500, "quantity": 1},
-        ],
-        "diskon": 200,  # discount amount
+def generate_dummy_order():
+    receipent_names = [
+        "Johnathan Edward Michaelson",
+        "Jane Samantha Elizabeth Smith",
+        "Alice Johanna Catherine Johnson",
+        "Robert Benjamin Oliver Brown",
+        "Emily Alexandra Davis Parker",
+    ]
+    sender_names = [
+        "MegaStore Inc.",
+        "QuickShop",
+        "Online Fashion",
+        "Tech Supplies",
+        "Book Haven",
+    ]
+    products = [
+        "Long Sleeve Cotton Shirt with Striped Pattern",
+        "Slim Fit Denim Jeans with Distressed Look",
+        "High-Performance Gaming Laptop",
+        "Bestselling Hardcover Novel",
+        "Latest Model Smartphone with Advanced Features",
+        "Noise-Cancelling Over-Ear Headphones",
+    ]
+    colors = ["red", "blue", "green", "black", "white", "yellow"]
+    addresses = [
+        "123 Maple Street, Springfield",
+        "456 Oak Avenue, Metropolis",
+        "789 Pine Road, Gotham",
+        "101 Birch Boulevard, Star City",
+        "202 Cedar Lane, Central City",
+    ]
+    phone_prefix = ["081", "082", "083", "084", "085"]
+
+    receipent_name = (
+        random.choice(receipent_names)
+        + " "
+        + " ".join(random.choices(receipent_names, k=3))
+    )
+    sender_name = (
+        random.choice(sender_names) + " " + " ".join(random.choices(sender_names, k=3))
+    )
+    receipent_telp = random.choice(phone_prefix) + "".join(
+        random.choices("0123456789", k=8)
+    )
+    sender_telp = "".join(random.choices("0123456789", k=35))
+    receipent_addr = random.choice(addresses)
+    total_amount = random.randint(100000, 5000000)
+    bank_name = random.choice(["BCA", "Mandiri", "BNI", "BRI", "CIMB Niaga"])
+
+    order_detail = "~!~".join(
+        [
+            f"{random.choice(products)} in {random.choice(colors)} color - Qty: {random.randint(1, 5)}"
+            for _ in range(random.randint(1, 10))
+        ]
+    )
+
+    invoice_date = datetime.datetime.now() - datetime.timedelta(
+        days=random.randint(1, 365)
+    )
+    invoice_date = invoice_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        "orderanku_id": "".join(random.choices("0123456789", k=8)),
+        "receipent_name": receipent_name,
+        "receipent_telp": receipent_telp,
+        "receipent_addr": receipent_addr,
+        "sender_name": sender_name,
+        "sender_telp": sender_telp,
+        "total_amount": total_amount,
+        "bank_name": bank_name,
+        "order_detail": order_detail,
+        "paid_flag": random.choice([True, False]),
+        "invoice_date": invoice_date,
     }
 
-    orderanku_data = {
-        "orderanku_id": 1,
-        "receipent_name": "Rudi Syahrudin Aulia Muhammad Rocky Gerung Super",
-        "receipent_telp": "0815912034",
-        "receipent_addr": "Jl. Babakan Madang No. 8 Sirkuit Sentul Bogor No 10",
-        "sender_name": "Herculex Indonesia Aulia Muhammad Rocky Gerung Super",
-        "sender_telp": "0000100002000030000400005000060000700",
-        "total_amount": 2525000,
-        "bank_name": "BCA",
-        # "order_detail": "Kemeja polos warna merah 1 Celana Chino Warna Coklat 1",
-        "order_detail": "000001~!~000~!~002~!~0000~!~03~!~000~!~004~!~000005~!~000006~!~000007~!~000008~!~000009~!~0",
-        "paid_flag": False,
-        "orderanku_id": "073-00068330",
-        "invoice_date": "2023-01-25 11:20:00",
-    }
 
-    # generate_orderanku(orderanku_data)
-
-    print(process_invoice_item_rows(orderanku_data))
-
-    # print(split_string("Kemeja polos warna merah 1 Celana Chino Warna Coklat 1", 20))
+# if __name__ == "__main__":
+#     generate_orderanku([generate_dummy_order() for i in range(1000)])
+# o = {
+#     "orderanku_id": 1,
+#     "receipent_name": "Rudi Syahrudin Aulia Muhammad Rocky Gerung Super",
+#     "receipent_telp": "0815912034",
+#     "receipent_addr": "Jl. Babakan Madang No. 8 Sirkuit Sentul Bogor No 10",
+#     "sender_name": "Herculex Indonesia Aulia Muhammad Rocky Gerung Super",
+#     "sender_telp": "0000100002000030000400005000060000700",
+#     "total_amount": 2525000,
+#     "bank_name": "BCA",
+#     "order_detail": "Kemeja polos warna merah 1~!~Celana Chino Warna Coklat 1",
+#     # "order_detail": "Kemeja polos warna merah 1~!~elana Chino Warna Coklat 1~!~000003~!~000004~!~000005~!~000006~!~000007saya sudah~!~pernah bilang erbkali berkali kalau kamu janga begitu~!~000008~!~000009~!~0",
+#     "paid_flag": True,
+#     "orderanku_id": "073",
+#     "invoice_date": "2023-01-25 11:20:00",
+# }

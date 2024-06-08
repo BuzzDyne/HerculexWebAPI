@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from fastapi_jwt_auth import AuthJWT
-from sqlalchemy import or_, and_
-from sqlalchemy.orm import Session, aliased
-from pdf_module import generate_pdf
+from sqlalchemy import or_
+from sqlalchemy.orm import Session
+from pdf_orderanku_module import generate_orderanku
 from datetime import datetime
 from math import ceil
 
@@ -12,6 +12,7 @@ from schemas import (
     OrderankuSellerEditForm,
     OrderankuItemCreateForm,
     OrderankuItemEditForm,
+    OrderankuBatchPrint,
 )
 
 from database import get_db, OrderankuItem_TM, OrderankuSeller_TR
@@ -315,7 +316,7 @@ def delete_order(
     return {"msg": f"Update OrderanID ({id}) successful", "data": order}
 
 
-@router.patch("/order/id/{id}/has_paid")
+@router.patch("/order/id/{id}/make_paid")
 def make_order_paid(
     id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)
 ):
@@ -343,7 +344,7 @@ def make_order_paid(
     return {"msg": f"Update paidDate of OrderanID ({id}) successful", "data": order}
 
 
-@router.patch("/order/id/{id}/print_resi")
+@router.post("/order/id/{id}/print_resi")
 def order_print(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     Authorize.jwt_required()
 
@@ -362,15 +363,129 @@ def order_print(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(g
 
     order = order_query.first()
 
-    # TODO Logic PDF Generation
+    inv_date = (
+        order.created_date.strftime("%Y-%m-%d %H:%M:%S") if order.created_date else None
+    )
+    address_parts = [
+        order.recipient_address,
+        order.recipient_kelurahan,
+        order.recipient_kecamatan,
+        order.recipient_kota_kab,
+        order.recipient_provinsi,
+    ]
+
+    filtered_address_parts = [part for part in address_parts if part]
+
+    order_addr = ", ".join(filtered_address_parts)
+
+    data = [
+        {
+            "orderanku_id": str(order.id),
+            "receipent_name": order.recipient_name,
+            "receipent_telp": "088888888888",  # TODO Add Recipient Phone in DB
+            "receipent_addr": order_addr,
+            "sender_name": order.seller_name,
+            "sender_telp": order.seller_phone,
+            "total_amount": float(order.order_total),
+            "bank_name": "BCA",  # TODO Add Bank Name in DB
+            "order_detail": order.order_details,
+            "paid_flag": True if order.paid_date else False,
+            "invoice_date": inv_date,
+        }
+    ]
+
+    # Logic PDF Generation
+    pdf_buffer = generate_orderanku(data)
 
     # Update to print_date
-
     order_query.update({"print_date": datetime.now()})
     db.commit()
     db.refresh(order)
 
-    return {"msg": f"Update paidDate of OrderanID ({id}) successful", "data": order}
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+    )
+
+
+@router.post("/order/batch_print")
+def batch_order_print(
+    payload: OrderankuBatchPrint,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+    ids = list(set(payload.order_ids))
+    ids.sort()
+
+    # Fetch all orders with the given IDs that are active
+    orders = (
+        db.query(OrderankuItem_TM)
+        .filter(OrderankuItem_TM.id.in_(ids), OrderankuItem_TM.is_active == 1)
+        .all()
+    )
+
+    # Find the IDs that were not found or inactive
+    found_ids = {order.id for order in orders}
+    not_found_ids = [id for id in ids if id not in found_ids]
+
+    # If any ID was not found or inactive, raise an HTTP exception with the first not found ID
+    if not_found_ids:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Orderanku IDs ({', '.join(not_found_ids)}) not found / inactive",
+        )
+
+    data = []
+
+    for order in orders:
+        inv_date = (
+            order.created_date.strftime("%Y-%m-%d %H:%M:%S")
+            if order.created_date
+            else None
+        )
+        address_parts = [
+            order.recipient_address,
+            order.recipient_kelurahan,
+            order.recipient_kecamatan,
+            order.recipient_kota_kab,
+            order.recipient_provinsi,
+        ]
+
+        filtered_address_parts = [part for part in address_parts if part]
+
+        order_addr = ", ".join(filtered_address_parts)
+
+        data.append(
+            {
+                "orderanku_id": order.id,
+                "receipent_name": order.recipient_name,
+                "receipent_telp": "088888888888",  # TODO Add Recipient Phone in DB
+                "receipent_addr": order_addr,
+                "sender_name": order.seller_name,
+                "sender_telp": order.seller_phone,
+                "total_amount": float(order.order_total),
+                "bank_name": "BCA",  # TODO Add Bank Name in DB
+                "order_detail": order.order_details,
+                "paid_flag": True if order.paid_date else False,
+                "invoice_date": inv_date,
+            }
+        )
+
+    # Logic PDF Generation
+    pdf_buffer = generate_orderanku(data)
+
+    # Update the print_date for all processed orders
+    order_ids = [order.id for order in orders]
+    db.query(OrderankuItem_TM).filter(OrderankuItem_TM.id.in_(order_ids)).update(
+        {"print_date": datetime.now()}, synchronize_session=False
+    )
+    db.commit()
+
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+    )
 
 
 @router.get("/seller")
