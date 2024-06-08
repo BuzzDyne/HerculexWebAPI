@@ -380,14 +380,14 @@ def order_print(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(g
 
     data = [
         {
-            "orderanku_id": str(order.id),
+            "orderanku_id": order.id,
             "receipent_name": order.recipient_name,
-            "receipent_telp": "088888888888",  # TODO Add Recipient Phone in DB
+            "receipent_telp": order.recipient_phone,
             "receipent_addr": order_addr,
             "sender_name": order.seller_name,
             "sender_telp": order.seller_phone,
             "total_amount": float(order.order_total),
-            "bank_name": "BCA",  # TODO Add Bank Name in DB
+            "bank_name": order.order_bank,
             "order_detail": order.order_details,
             "paid_flag": True if order.paid_date else False,
             "invoice_date": inv_date,
@@ -460,12 +460,12 @@ def batch_order_print(
             {
                 "orderanku_id": order.id,
                 "receipent_name": order.recipient_name,
-                "receipent_telp": "088888888888",  # TODO Add Recipient Phone in DB
+                "receipent_telp": order.recipient_phone,
                 "receipent_addr": order_addr,
                 "sender_name": order.seller_name,
                 "sender_telp": order.seller_phone,
                 "total_amount": float(order.order_total),
-                "bank_name": "BCA",  # TODO Add Bank Name in DB
+                "bank_name": order.order_bank,
                 "order_detail": order.order_details,
                 "paid_flag": True if order.paid_date else False,
                 "invoice_date": inv_date,

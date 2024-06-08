@@ -409,6 +409,7 @@ def generate_orderanku(data_arr):
             start_row = data_map[key]["iRow"]
             for i, line in enumerate(data_map[key]["lines"]):
                 row = start_row + i
+                line = line if line else ""
                 p.drawString(data_x, base_text_y - (row * UNIT), line)
 
         dh_x_2 = barcode_line_x_2 + 5
