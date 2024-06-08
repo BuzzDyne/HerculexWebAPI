@@ -255,5 +255,5 @@ class OrderankuItemEditForm(BaseModel):
     clear_print: Optional[bool] = False
 
 
-class OrderankuBatchPrint(BaseModel):
+class OrderankuListIdPayload(BaseModel):
     order_ids: List[int]

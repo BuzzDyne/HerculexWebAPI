@@ -563,7 +563,7 @@ def generate_dummy_order():
     invoice_date = invoice_date.strftime("%Y-%m-%d %H:%M:%S")
 
     return {
-        "orderanku_id": "".join(random.choices("0123456789", k=8)),
+        "orderanku_id": random.randint(1, 10000),
         "receipent_name": receipent_name,
         "receipent_telp": receipent_telp,
         "receipent_addr": receipent_addr,

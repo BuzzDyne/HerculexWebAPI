@@ -12,12 +12,35 @@ from schemas import (
     OrderankuSellerEditForm,
     OrderankuItemCreateForm,
     OrderankuItemEditForm,
-    OrderankuBatchPrint,
+    OrderankuListIdPayload,
 )
 
 from database import get_db, OrderankuItem_TM, OrderankuSeller_TR
 
 router = APIRouter(tags=["API Orderanku"], prefix="/api_orderanku")
+
+
+def validate_orders(db, order_ids):
+    ids = list(set(order_ids))
+    ids.sort()
+    # Fetch all orders with the given IDs that are active
+    orders = (
+        db.query(OrderankuItem_TM)
+        .filter(OrderankuItem_TM.id.in_(ids), OrderankuItem_TM.is_active == 1)
+        .all()
+    )
+
+    # Find the IDs that were not found or inactive
+    found_ids = {order.id for order in orders}
+    not_found_ids = [id for id in ids if id not in found_ids]
+
+    # If any ID was not found or inactive, raise an HTTP exception with the first not found ID
+    if not_found_ids:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Orderanku IDs ({', '.join(map(str, not_found_ids))}) not found / inactive",
+        )
+    return orders
 
 
 @router.get("/order")
@@ -344,6 +367,24 @@ def make_order_paid(
     return {"msg": f"Update paidDate of OrderanID ({id}) successful", "data": order}
 
 
+@router.patch("/order/batch_paid")
+def batch_order_paid(
+    payload: OrderankuListIdPayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+
+    orders = validate_orders(db, payload.order_ids)
+
+    for order in orders:
+        order.paid_date = datetime.now()
+
+    db.commit()
+
+    return {"msg": "Batch update paidDate successful"}
+
+
 @router.post("/order/id/{id}/print_resi")
 def order_print(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)):
     Authorize.jwt_required()
@@ -410,31 +451,13 @@ def order_print(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(g
 
 @router.post("/order/batch_print")
 def batch_order_print(
-    payload: OrderankuBatchPrint,
+    payload: OrderankuListIdPayload,
     Authorize: AuthJWT = Depends(),
     db: Session = Depends(get_db),
 ):
     Authorize.jwt_required()
-    ids = list(set(payload.order_ids))
-    ids.sort()
 
-    # Fetch all orders with the given IDs that are active
-    orders = (
-        db.query(OrderankuItem_TM)
-        .filter(OrderankuItem_TM.id.in_(ids), OrderankuItem_TM.is_active == 1)
-        .all()
-    )
-
-    # Find the IDs that were not found or inactive
-    found_ids = {order.id for order in orders}
-    not_found_ids = [id for id in ids if id not in found_ids]
-
-    # If any ID was not found or inactive, raise an HTTP exception with the first not found ID
-    if not_found_ids:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Orderanku IDs ({', '.join(not_found_ids)}) not found / inactive",
-        )
+    orders = validate_orders(db, payload.order_ids)
 
     data = []
 
