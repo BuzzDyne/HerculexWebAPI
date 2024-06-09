@@ -548,9 +548,9 @@ def get_sellers(
     name: str = None,
     phone: str = None,
     sort_field: str = "id",
-    sort_order: str = "asc",
+    sort_order: str = "desc",
     page: int = 1,  # Default page number is 1
-    per_page: int = 5,  # Default number of results per page is 10
+    per_page: int = 20,  # Default number of results per page is 10
     Authorize: AuthJWT = Depends(),
     db: Session = Depends(get_db),
 ):
