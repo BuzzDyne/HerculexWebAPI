@@ -39,7 +39,7 @@ def format_number_with_commas(number):
     >>> format_number_with_commas(1234567890)
     '1,234,567,890'
     """
-    formatted_number = "{:,}".format(number)
+    formatted_number = "{:,}".format(int(number))
     return formatted_number
 
 

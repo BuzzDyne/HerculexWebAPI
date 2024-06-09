@@ -52,6 +52,7 @@ def get_orders(
     created_date_from: str = None,
     created_date_to: str = None,
     recipient_name: str = None,
+    recipient_phone: str = None,
     recipient_addr: str = None,
     total_from: float = None,
     total_to: float = None,
@@ -78,6 +79,11 @@ def get_orders(
     if recipient_name:
         query = query.filter(
             OrderankuItem_TM.recipient_name.ilike(f"%{recipient_name}%")
+        )
+
+    if recipient_phone:
+        query = query.filter(
+            OrderankuItem_TM.recipient_phone.ilike(f"%{recipient_phone}%")
         )
 
     if recipient_addr:
@@ -156,7 +162,8 @@ def get_orders(
             {
                 "id": result.id,
                 "recipient_name": result.recipient_name,
-                "recipient_address": ", ".join(
+                "recipient_phone": result.recipient_phone,
+                "recipient_address_display": ", ".join(
                     [
                         value
                         for value in [
@@ -169,8 +176,14 @@ def get_orders(
                         if value
                     ]
                 ),
+                "recipient_address": result.recipient_address,
+                "recipient_kelurahan": result.recipient_kelurahan,
+                "recipient_kecamatan": result.recipient_kecamatan,
+                "recipient_kota_kab": result.recipient_kota_kab,
+                "recipient_provinsi": result.recipient_provinsi,
                 "order_details": result.order_details,
                 "order_total": result.order_total,
+                "order_bank": result.order_bank,
                 "created_date": result.created_date,
                 "print_date": result.print_date,
                 "paid_date": result.paid_date,
@@ -214,6 +227,7 @@ def create_order(
 
     new_orderanku = OrderankuItem_TM(
         recipient_name=payload.recipient_name,
+        recipient_phone=payload.recipient_phone,
         recipient_provinsi=payload.recipient_provinsi,
         recipient_kota_kab=payload.recipient_kota_kab,
         recipient_kecamatan=payload.recipient_kecamatan,
@@ -221,6 +235,7 @@ def create_order(
         recipient_address=payload.recipient_address,
         order_details=payload.order_details,
         order_total=payload.order_total,
+        order_bank=payload.order_bank,
         created_date=datetime.now(),
         seller_name=payload.seller_name,
         seller_phone=payload.seller_phone,
@@ -444,7 +459,7 @@ def order_print(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(g
             "receipent_addr": order_addr,
             "sender_name": order.seller_name,
             "sender_telp": order.seller_phone,
-            "total_amount": float(order.order_total),
+            "total_amount": int(order.order_total),
             "bank_name": order.order_bank,
             "order_detail": order.order_details,
             "paid_flag": True if order.paid_date else False,
