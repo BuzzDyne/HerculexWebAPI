@@ -190,7 +190,7 @@ def process_invoice_item_rows(inv_data):
     }
 
     curr_row += 2
-    data_rows = split_string(inv_data["order_detail"], R_MAX_LENGTH)
+    data_rows = split_string(inv_data["order_detail"], R_MAX_LENGTH, "\n")
     item_mapping["d_detail"] = {
         "iRow": curr_row,
         "lines": data_rows,
