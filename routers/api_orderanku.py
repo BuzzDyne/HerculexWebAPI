@@ -339,6 +339,23 @@ def delete_order(
     return {"msg": f"Update OrderanID ({id}) successful", "data": order}
 
 
+@router.patch("/order/batch_delete")
+def batch_order_delete(
+    payload: OrderankuListIdPayload,
+    Authorize: AuthJWT = Depends(),
+    db: Session = Depends(get_db),
+):
+    Authorize.jwt_required()
+
+    orders = validate_orders(db, payload.order_ids)
+
+    for order in orders:
+        order.is_active = 0
+    db.commit()
+
+    return {"msg": "Batch delete Orders successful"}
+
+
 @router.patch("/order/id/{id}/make_paid")
 def make_order_paid(
     id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(get_db)
