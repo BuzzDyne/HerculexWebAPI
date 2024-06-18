@@ -89,6 +89,7 @@ def get_orders(
     if recipient_addr:
         query = query.filter(
             or_(
+                OrderankuItem_TM.recipient_postal.ilike(f"%{recipient_addr}%"),
                 OrderankuItem_TM.recipient_provinsi.ilike(f"%{recipient_addr}%"),
                 OrderankuItem_TM.recipient_kota_kab.ilike(f"%{recipient_addr}%"),
                 OrderankuItem_TM.recipient_kecamatan.ilike(f"%{recipient_addr}%"),
@@ -181,6 +182,7 @@ def get_orders(
                 "recipient_kecamatan": result.recipient_kecamatan,
                 "recipient_kota_kab": result.recipient_kota_kab,
                 "recipient_provinsi": result.recipient_provinsi,
+                "recipient_postal": result.recipient_postal,
                 "order_details": result.order_details,
                 "order_total": result.order_total,
                 "order_bank": result.order_bank,
@@ -228,6 +230,7 @@ def create_order(
     new_orderanku = OrderankuItem_TM(
         recipient_name=payload.recipient_name,
         recipient_phone=payload.recipient_phone,
+        recipient_postal=payload.recipient_postal,
         recipient_provinsi=payload.recipient_provinsi,
         recipient_kota_kab=payload.recipient_kota_kab,
         recipient_kecamatan=payload.recipient_kecamatan,
@@ -445,6 +448,7 @@ def order_print(id: str, Authorize: AuthJWT = Depends(), db: Session = Depends(g
         order.recipient_kecamatan,
         order.recipient_kota_kab,
         order.recipient_provinsi,
+        order.recipient_postal,
     ]
 
     filtered_address_parts = [part for part in address_parts if part]
@@ -505,6 +509,7 @@ def batch_order_print(
             order.recipient_kecamatan,
             order.recipient_kota_kab,
             order.recipient_provinsi,
+            order.recipient_postal,
         ]
 
         filtered_address_parts = [part for part in address_parts if part]

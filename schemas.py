@@ -230,6 +230,7 @@ class OrderankuSellerEditForm(BaseModel):
 class OrderankuItemCreateForm(BaseModel):
     recipient_name: str
     recipient_phone: Optional[str]
+    recipient_postal: Optional[str]
     recipient_provinsi: Optional[str]
     recipient_kota_kab: Optional[str]
     recipient_kecamatan: Optional[str]
@@ -245,6 +246,7 @@ class OrderankuItemCreateForm(BaseModel):
 class OrderankuItemEditForm(BaseModel):
     recipient_name: Optional[str] = None
     recipient_phone: Optional[str]
+    recipient_postal: Optional[str] = None
     recipient_provinsi: Optional[str] = None
     recipient_kota_kab: Optional[str] = None
     recipient_kecamatan: Optional[str] = None
