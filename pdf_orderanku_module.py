@@ -96,7 +96,7 @@ def split_string(input_string, max_length=70, br_token="~!~"):
     return result_list
 
 
-def process_invoice_item_rows(inv_data):
+def process_invoice_item_rows(inv_data, min_rows=10):
     """
     Process invoice item rows based on the provided invoice data.
 
@@ -112,6 +112,9 @@ def process_invoice_item_rows(inv_data):
         - 'total_amount': float, the total amount of the invoice.
         - 'bank_name': str, the name of the bank (optional).
         - 'order_detail': str, details of the order.
+
+    min_rows : int, optional
+        The minimum number of rows required for the invoice layout. Default is 10.
 
     Returns
     -------
@@ -133,9 +136,8 @@ def process_invoice_item_rows(inv_data):
     The maximum length of lines in the right column is determined by R_MAX_LENGTH constant.
 
     """
-    MIN_ROWS = 13
-    L_MAX_LENGTH = 37
-    R_MAX_LENGTH = 46
+    L_MAX_LENGTH = 39
+    R_MAX_LENGTH = 49
 
     item_mapping = {}
 
@@ -199,10 +201,11 @@ def process_invoice_item_rows(inv_data):
     r_row_count = curr_row + len(data_rows) - 1
     # endregion
 
-    l_row_count = l_row_count + 1 if l_row_count >= MIN_ROWS else l_row_count
-    r_row_count = r_row_count + 1 if r_row_count >= MIN_ROWS else r_row_count
+    # Adjust row counts based on minimum rows required
+    l_row_count = l_row_count + 1 if l_row_count >= min_rows else l_row_count
+    r_row_count = r_row_count + 1 if r_row_count >= min_rows else r_row_count
 
-    return item_mapping, max(MIN_ROWS, l_row_count, r_row_count)
+    return item_mapping, max(min_rows, l_row_count, r_row_count)
 
 
 def generate_id_header(order_id=5001):
@@ -278,8 +281,9 @@ def generate_orderanku(data_arr):
     UNIT = 12
     A4_width, A4_height = A4
     MID_X = A4_width / 2
-    BARCODE_W = 100 / 2
-    BARCODE_H = 350 / 2
+    BARCODE_W = 100 / 2.75
+    BARCODE_H = 350 / 2.75
+    MIN_ROWS = 9
     TEXT_LEV = 3.3
 
     pdfmetrics.registerFont(TTFont("Reddit-Black", "res/fonts/RedditMono-Black.ttf"))
@@ -292,7 +296,7 @@ def generate_orderanku(data_arr):
     for data in data_arr:
         # region Definitions
 
-        data_map, data_row_count = process_invoice_item_rows(data)
+        data_map, data_row_count = process_invoice_item_rows(data, min_rows=MIN_ROWS)
         area_rows = data_row_count + 3  # top-padding, header, spacing
 
         if curr_caret_y - (area_rows * UNIT) <= 0:
@@ -356,7 +360,9 @@ def generate_orderanku(data_arr):
 
         # Draw the barcode (Left)
         barcode_x = left_top[0] + 2
-        barcode_y = left_top[1] - BARCODE_H - 2 - (((data_row_count - 13) / 2) * UNIT)
+        barcode_y = (
+            left_top[1] - BARCODE_H - 2 - (((data_row_count - MIN_ROWS) / 2) * UNIT)
+        )
 
         p.drawInlineImage(
             barcode_image, barcode_x, barcode_y, width=BARCODE_W, height=BARCODE_H
@@ -501,7 +507,7 @@ def create_pdf417_barcode(data_str):
     return rotated_image
 
 
-def generate_dummy_order():
+def generate_dummy_order_long():
     receipent_names = [
         "Johnathan Edward Michaelson",
         "Jane Samantha Elizabeth Smith",
@@ -550,7 +556,7 @@ def generate_dummy_order():
     total_amount = random.randint(100000, 5000000)
     bank_name = random.choice(["BCA", "Mandiri", "BNI", "BRI", "CIMB Niaga"])
 
-    order_detail = "~!~".join(
+    order_detail = "\n".join(
         [
             f"{random.choice(products)} in {random.choice(colors)} color - Qty: {random.randint(1, 5)}"
             for _ in range(random.randint(1, 10))
@@ -577,8 +583,78 @@ def generate_dummy_order():
     }
 
 
+def generate_dummy_order_short():
+    receipent_names = [
+        "Johnathan Michaelson",
+        "Jane Smith",
+        "Alice Johnson",
+        "Robert Brown",
+        "Emily Parker",
+    ]
+    sender_names = [
+        "MegaStore",
+        "QuickShop",
+        "FashionHub",
+        "Tech Gear",
+        "BookBarn",
+    ]
+    products = [
+        "Cotton Shirt",
+        "Denim Jeans",
+        "Gaming Laptop",
+        "Hardcover Novel",
+        "Smartphone",
+        "Headphones",
+    ]
+    colors = ["red", "blue", "green", "black", "white", "yellow"]
+    addresses = [
+        "123 Maple Street",
+        "456 Oak Avenue",
+        "789 Pine Road",
+        "101 Birch Boulevard",
+        "202 Cedar Lane",
+    ]
+    phone_prefix = ["081", "082", "083", "084", "085"]
+
+    receipent_name = random.choice(receipent_names)
+    sender_name = random.choice(sender_names)
+    receipent_telp = random.choice(phone_prefix) + "".join(
+        random.choices("0123456789", k=8)
+    )
+    sender_telp = "".join(random.choices("0123456789", k=10))
+    receipent_addr = random.choice(addresses)
+    total_amount = random.randint(10000, 1000000)
+    bank_name = random.choice(["BCA", "Mandiri", "BNI", "BRI", "CIMB"])
+
+    order_detail = "\n".join(
+        [
+            f"{random.choice(products)} - {random.choice(colors)} - Qty: {random.randint(1, 3)}"
+            for _ in range(random.randint(1, 5))
+        ]
+    )
+
+    invoice_date = datetime.datetime.now() - datetime.timedelta(
+        days=random.randint(1, 365)
+    )
+    invoice_date = invoice_date.strftime("%Y-%m-%d %H:%M:%S")
+
+    return {
+        "orderanku_id": random.randint(1, 10000),
+        "receipent_name": receipent_name,
+        "receipent_telp": receipent_telp,
+        "receipent_addr": receipent_addr,
+        "sender_name": sender_name,
+        "sender_telp": sender_telp,
+        "total_amount": total_amount,
+        "bank_name": bank_name,
+        "order_detail": order_detail,
+        "paid_flag": random.choice([True, False]),
+        "invoice_date": invoice_date,
+    }
+
+
 # if __name__ == "__main__":
-#     generate_orderanku([generate_dummy_order() for i in range(1000)])
+#     generate_orderanku([generate_dummy_order_short() for i in range(10)])
 # o = {
 #     "orderanku_id": 1,
 #     "receipent_name": "Rudi Syahrudin Aulia Muhammad Rocky Gerung Super",
