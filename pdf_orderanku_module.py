@@ -136,8 +136,8 @@ def process_invoice_item_rows(inv_data, min_rows=10):
     The maximum length of lines in the right column is determined by R_MAX_LENGTH constant.
 
     """
-    L_MAX_LENGTH = 39
-    R_MAX_LENGTH = 49
+    L_MAX_LENGTH = 28
+    R_MAX_LENGTH = 38
 
     item_mapping = {}
 
@@ -279,6 +279,7 @@ def generate_orderanku(data_arr):
     pdf_buffer (BytesIO): A buffer containing the PDF data.
     """
     UNIT = 12
+    HORI_PADDING = 6 * UNIT
     A4_width, A4_height = A4
     MID_X = A4_width / 2
     BARCODE_W = 100 / 2.75
@@ -306,10 +307,10 @@ def generate_orderanku(data_arr):
         table_top_y = curr_caret_y - UNIT
         table_bot_y = table_top_y - ((data_row_count + 2) * UNIT)
 
-        left_top = (2 * UNIT, table_top_y)
-        left_bot = (2 * UNIT, table_bot_y)
-        right_top = (A4_width - 2 * UNIT, table_top_y)
-        right_bot = (A4_width - 2 * UNIT, table_bot_y)
+        left_top = (HORI_PADDING, table_top_y)
+        left_bot = (HORI_PADDING, table_bot_y)
+        right_top = (A4_width - HORI_PADDING, table_top_y)
+        right_bot = (A4_width - HORI_PADDING, table_bot_y)
         mid_top = (MID_X, table_top_y)
         mid_bot = (MID_X, table_bot_y)
 
@@ -417,6 +418,10 @@ def generate_orderanku(data_arr):
                 row = start_row + i
                 line = line if line else ""
                 p.drawString(data_x, base_text_y - (row * UNIT), line)
+
+        # p.drawString(
+        #     data_x, base_text_y - (MIN_ROWS * UNIT), "000010000200003000040000500006"
+        # )
 
         dh_x_2 = barcode_line_x_2 + 5
         colon_x_2 = dh_x_2 + 32
