@@ -483,7 +483,17 @@ def update_order_pic(
     # Check if the order exists
     order = db.query(Order_TM).filter(Order_TM.id == order_id).first()
     if not order:
-        return {"error": "Order not found"}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"OrderID ({order_id}) not found",
+        )
+
+    # Data Stale Validation
+    if order.pic_user_id is not data.old_pic_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
 
     before_pic_name = get_user_name(db, order.pic_user_id)
     after_pic_name = get_user_name(db, data.pic_id)
