@@ -152,6 +152,7 @@ class OrderInitialInputPayload(BaseModel):
     pic_user_id: Optional[str]
     cust_phone_no: Optional[str]
     user_deadline_prd: Optional[str]
+    check_stale: Optional[bool]
 
 
 # Order PIC Form

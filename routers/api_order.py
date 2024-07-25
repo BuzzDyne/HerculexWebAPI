@@ -408,7 +408,7 @@ def update_order(
     before_internal_status_id = order.internal_status_id
 
     # Data Stale Validation
-    if before_internal_status_id is not "100":
+    if before_internal_status_id != "100":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -496,7 +496,7 @@ def update_order_pic(
         )
 
     # Data Stale Validation
-    if order.pic_user_id is not data.old_pic_id:
+    if order.pic_user_id != data.old_pic_id:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -539,7 +539,7 @@ def update_order_initial_data(
     before_internal_status_id = order.internal_status_id
 
     # Data Stale Validation
-    if before_internal_status_id is not "000":
+    if data.check_stale and before_internal_status_id != "000":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -606,7 +606,7 @@ def update_order_design_acc(
     before_internal_status_id = order.internal_status_id
 
     # Data Stale Validation
-    if before_internal_status_id is not "200":
+    if before_internal_status_id != "200":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -641,7 +641,7 @@ def update_order_design_rej(
     before_internal_status_id = order.internal_status_id
 
     # Data Stale Validation
-    if before_internal_status_id is not "200":
+    if before_internal_status_id != "200":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -676,7 +676,7 @@ def update_order_print_done(
     before_internal_status_id = order.internal_status_id
 
     # Data Stale Validation
-    if before_internal_status_id is not "300":
+    if before_internal_status_id != "300":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -712,7 +712,7 @@ def update_order_packing_done(
     before_internal_status_id = order.internal_status_id
 
     # Data Stale Validation
-    if before_internal_status_id is not "400":
+    if before_internal_status_id != "400":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -828,7 +828,7 @@ def submit_batchfile_print_done(
     batchfile = check_if_batchfile_exist(id, db)
 
     # Data Stale Validation
-    if batchfile.printed_dt is not None:
+    if batchfile.printed_dt != None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Request is conflicted. Please refresh page!",
@@ -875,7 +875,7 @@ def create_batchfile(
         order = check_if_order_exist(order_id, db)
 
         # Data Stale Validation
-        if order.internal_status_id is not "250":
+        if order.internal_status_id != "250":
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"Request is conflicted. Please refresh page!",
