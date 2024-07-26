@@ -216,6 +216,7 @@ class OrderDocument(BaseModel):
     due_date: str
     items: List[OrderDocumentItem]
     discount: float
+    down_payment: float
 
 
 class OrderankuSeller(BaseModel):

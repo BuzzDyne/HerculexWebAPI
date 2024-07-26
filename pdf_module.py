@@ -124,11 +124,25 @@ def generate_pdf(invoice_data):
     # Total
     grand_total = subtotal - invoice_data["diskon"]
     p.setFont(BOLD_FONT, 12)
-    p.drawString(x + col_widths[0], y - (row_height * 3), f"Total")
+    # p.drawString(x + col_widths[0], y - (row_height * 3), f"Total")
+    # p.drawString(
+    #     x + col_widths[0] + col_widths[1] + col_widths[2],
+    #     y - (row_height * 3),
+    #     f"{format_number_with_commas(grand_total)}",
+    # )
+    # p.line(
+    #     x + col_widths[0] - 10,
+    #     y - (row_height * 3) - 5,
+    #     A4[0] - 36,
+    #     y - (row_height * 3) - 5,
+    # )
+    # DownPayment
+    p.setFont(NORMAL_FONT, 12)
+    p.drawString(x + col_widths[0], y - (row_height * 3), f"DP")
     p.drawString(
         x + col_widths[0] + col_widths[1] + col_widths[2],
         y - (row_height * 3),
-        f"{format_number_with_commas(grand_total)}",
+        f"{format_number_with_commas(invoice_data['down_payment'])}",
     )
     p.line(
         x + col_widths[0] - 10,
@@ -136,13 +150,29 @@ def generate_pdf(invoice_data):
         A4[0] - 36,
         y - (row_height * 3) - 5,
     )
+    # Sisa
+    p.setFont(BOLD_FONT, 12)
+    grand_sisa = grand_total - invoice_data["down_payment"]
+    p.setFont(BOLD_FONT, 12)
+    p.drawString(x + col_widths[0], y - (row_height * 4), f"Total")
+    p.drawString(
+        x + col_widths[0] + col_widths[1] + col_widths[2],
+        y - (row_height * 4),
+        f"{format_number_with_commas(grand_sisa)}",
+    )
+    p.line(
+        x + col_widths[0] - 10,
+        y - (row_height * 4) - 5,
+        A4[0] - 36,
+        y - (row_height * 4) - 5,
+    )
 
     # Terbilang
-    terbilang_y = y - (row_height * 4)
+    terbilang_y = y - (row_height * 5)
     row_height = 15
     p.drawString(x, terbilang_y, f"Terbilang")
     p.setFont(NORMAL_FONT, 12)
-    list_of_terbilang = convert_to_terbilang(grand_total)
+    list_of_terbilang = convert_to_terbilang(grand_sisa)
 
     for item in list_of_terbilang:
         terbilang_y -= row_height

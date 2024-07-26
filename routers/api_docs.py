@@ -43,6 +43,7 @@ def create_order_doc(
         cust_fax=data.cust_fax,
         due_date=data.due_date,
         discount=data.discount,
+        down_payment=data.down_payment,
         generated_date=datetime.now(),
     )
 
@@ -99,6 +100,7 @@ def edit_order_doc(
     existing_doc.cust_fax = data.cust_fax
     existing_doc.due_date = data.due_date
     existing_doc.discount = data.discount
+    existing_doc.down_payment = data.down_payment
 
     # Update items in OrderDocumentItem_TR
     # Delete existing items
@@ -178,7 +180,8 @@ def get_document_by_id(doc_id: int, db: Session = Depends(get_db)):
         "cust_phone": doc.cust_phone,
         "cust_fax": doc.cust_fax,
         "due_date": doc.due_date,
-        "discount": float(doc.discount),  # Assuming discount is a decimal field
+        "discount": float(doc.discount),
+        "down_payment": float(doc.down_payment),
         "items": [
             {
                 "id": item.id,
@@ -268,6 +271,9 @@ def get_invoice_data_by_orderdocid(id: str, db: Session):
         "due_date": doc_tm[0].due_date,
         "items": [],
         "diskon": int(doc_tm[0].discount) if doc_tm[0].discount is not None else None,
+        "down_payment": (
+            int(doc_tm[0].down_payment) if doc_tm[0].down_payment is not None else None
+        ),
     }
 
     for i in doc_items:
