@@ -407,6 +407,13 @@ def update_order(
 
     before_internal_status_id = order.internal_status_id
 
+    # Data Stale Validation
+    if before_internal_status_id != "100":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
+
     extracted_thumb_url = (
         extract_link_from_url(data.thumb_file_url) if data.thumb_file_url else None
     )
@@ -483,7 +490,17 @@ def update_order_pic(
     # Check if the order exists
     order = db.query(Order_TM).filter(Order_TM.id == order_id).first()
     if not order:
-        return {"error": "Order not found"}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"OrderID ({order_id}) not found",
+        )
+
+    # Data Stale Validation
+    if order.pic_user_id != data.old_pic_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
 
     before_pic_name = get_user_name(db, order.pic_user_id)
     after_pic_name = get_user_name(db, data.pic_id)
@@ -520,6 +537,13 @@ def update_order_initial_data(
     before_phone_no = order.cust_phone_no
     before_user_deadline_prd = order.user_deadline_prd
     before_internal_status_id = order.internal_status_id
+
+    # Data Stale Validation
+    if data.check_stale and before_internal_status_id != "000":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
 
     # Check if the values have changed
     phone_no_changed = before_phone_no != data.cust_phone_no
@@ -581,6 +605,13 @@ def update_order_design_acc(
 
     before_internal_status_id = order.internal_status_id
 
+    # Data Stale Validation
+    if before_internal_status_id != "200":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
+
     order.design_acc_dt = data.date if data.date else datetime.now()
     order.last_updated_ts = datetime.now()
     if before_internal_status_id == "200":
@@ -608,6 +639,13 @@ def update_order_design_rej(
     order = check_if_order_exist(id, db)
 
     before_internal_status_id = order.internal_status_id
+
+    # Data Stale Validation
+    if before_internal_status_id != "200":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
 
     order.last_updated_ts = datetime.now()
     if before_internal_status_id == "200":
@@ -637,6 +675,13 @@ def update_order_print_done(
 
     before_internal_status_id = order.internal_status_id
 
+    # Data Stale Validation
+    if before_internal_status_id != "300":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
+
     order.print_done_dt = data.date if data.date else datetime.now()
     order.last_updated_ts = datetime.now()
     if before_internal_status_id == "300":
@@ -665,6 +710,13 @@ def update_order_packing_done(
     order = check_if_order_exist(id, db)
 
     before_internal_status_id = order.internal_status_id
+
+    # Data Stale Validation
+    if before_internal_status_id != "400":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
 
     order.packing_done_dt = data.date if data.date else datetime.now()
     order.last_updated_ts = datetime.now()
@@ -775,6 +827,13 @@ def submit_batchfile_print_done(
     # Check if batchfileID exists
     batchfile = check_if_batchfile_exist(id, db)
 
+    # Data Stale Validation
+    if batchfile.printed_dt != None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Request is conflicted. Please refresh page!",
+        )
+
     # Update batchFile
     batchfile.printer_user_id = printer.id
     batchfile.printed_dt = datetime.now()
@@ -814,6 +873,14 @@ def create_batchfile(
     # Check if all Order is valid
     for order_id in data.order_ids:
         order = check_if_order_exist(order_id, db)
+
+        # Data Stale Validation
+        if order.internal_status_id != "250":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Request is conflicted. Please refresh page!",
+            )
+
         validated_orders.append(order)
 
     # Check if designer_id is valid

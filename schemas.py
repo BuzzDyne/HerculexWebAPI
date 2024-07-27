@@ -152,12 +152,14 @@ class OrderInitialInputPayload(BaseModel):
     pic_user_id: Optional[str]
     cust_phone_no: Optional[str]
     user_deadline_prd: Optional[str]
+    check_stale: Optional[bool]
 
 
 # Order PIC Form
 class OrderPICUpdatePayload(BaseModel):
     user_id: Optional[int]
-    pic_id: Optional[int]
+    pic_id: int
+    old_pic_id: Optional[int]
 
 
 # Order Comment Form
@@ -214,6 +216,7 @@ class OrderDocument(BaseModel):
     due_date: str
     items: List[OrderDocumentItem]
     discount: float
+    down_payment: float
 
 
 class OrderankuSeller(BaseModel):
