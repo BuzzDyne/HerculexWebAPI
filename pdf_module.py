@@ -95,28 +95,30 @@ def generate_pdf(invoice_data):
     p.line(36, y - 5, A4[0] - 36, y - 5)
 
     # Subtable Data
+    subtable_base_x = x + col_widths[0]
+    subtable_line_x1 = subtable_base_x - 10
     # Subtotal
-    p.drawString(x + col_widths[0], y - row_height, f"Subtotal")
+    p.drawString(subtable_base_x, y - row_height, f"Subtotal")
     p.drawString(
         x + col_widths[0] + col_widths[1] + col_widths[2],
         y - row_height,
         f"{format_number_with_commas(subtotal)}",
     )
     p.line(
-        x + col_widths[0] - 10,
+        subtable_line_x1,
         y - row_height - 5,
         A4[0] - 36,
         y - row_height - 5,
     )
     # Diskon
-    p.drawString(x + col_widths[0], y - (row_height * 2), f"Diskon")
+    p.drawString(subtable_base_x, y - (row_height * 2), f"Diskon")
     p.drawString(
         x + col_widths[0] + col_widths[1] + col_widths[2],
         y - (row_height * 2),
         f"{format_number_with_commas(invoice_data['diskon'])}",
     )
     p.line(
-        x + col_widths[0] - 10,
+        subtable_line_x1,
         y - (row_height * 2) - 5,
         A4[0] - 36,
         y - (row_height * 2) - 5,
@@ -124,44 +126,43 @@ def generate_pdf(invoice_data):
     # Total
     grand_total = subtotal - invoice_data["diskon"]
     p.setFont(BOLD_FONT, 12)
-    # p.drawString(x + col_widths[0], y - (row_height * 3), f"Total")
+    # p.drawString(subtable_base_x, y - (row_height * 3), f"Total")
     # p.drawString(
     #     x + col_widths[0] + col_widths[1] + col_widths[2],
     #     y - (row_height * 3),
     #     f"{format_number_with_commas(grand_total)}",
     # )
     # p.line(
-    #     x + col_widths[0] - 10,
+    #     subtable_line_x1,
     #     y - (row_height * 3) - 5,
     #     A4[0] - 36,
     #     y - (row_height * 3) - 5,
     # )
     # DownPayment
     p.setFont(NORMAL_FONT, 12)
-    p.drawString(x + col_widths[0], y - (row_height * 3), f"DP")
+    p.drawString(subtable_base_x, y - (row_height * 3), f"DP")
     p.drawString(
         x + col_widths[0] + col_widths[1] + col_widths[2],
         y - (row_height * 3),
         f"{format_number_with_commas(invoice_data['down_payment'])}",
     )
     p.line(
-        x + col_widths[0] - 10,
+        subtable_line_x1,
         y - (row_height * 3) - 5,
         A4[0] - 36,
         y - (row_height * 3) - 5,
     )
     # Sisa
-    p.setFont(BOLD_FONT, 12)
     grand_sisa = grand_total - invoice_data["down_payment"]
     p.setFont(BOLD_FONT, 12)
-    p.drawString(x + col_widths[0], y - (row_height * 4), f"Total")
+    p.drawString(subtable_base_x, y - (row_height * 4), f"Pelunasan")
     p.drawString(
         x + col_widths[0] + col_widths[1] + col_widths[2],
         y - (row_height * 4),
         f"{format_number_with_commas(grand_sisa)}",
     )
     p.line(
-        x + col_widths[0] - 10,
+        subtable_line_x1,
         y - (row_height * 4) - 5,
         A4[0] - 36,
         y - (row_height * 4) - 5,
@@ -209,17 +210,11 @@ def generate_pdf(invoice_data):
     byr_base_y = ttd_base_y - (row_height * 4)
 
     p.setFont(BOLD_FONT, 12)
-    p.drawString(
-        byr_base_x, byr_base_y,
-        "Informasi Pembayaran"
-    )
+    p.drawString(byr_base_x, byr_base_y, "Informasi Pembayaran")
     p.setFont(NORMAL_FONT, 12)
     p.drawString(
-        byr_base_x, byr_base_y - row_height,
-        "BCA a.n. Ivan Leonardo - 0845248007"
+        byr_base_x, byr_base_y - row_height, "BCA a.n. Ivan Leonardo - 0845248007"
     )
-
-
 
     p.save()
 
