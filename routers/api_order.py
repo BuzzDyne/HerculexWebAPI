@@ -415,8 +415,12 @@ def update_order(
             detail=f"Request is conflicted. Please refresh page!",
         )
 
-    extracted_thumb_url, extract_retry = (
-        extract_link_from_url(data.thumb_file_url) if data.thumb_file_url else (None, 0)
+    # extracted_thumb_url, extract_retry = (
+    #     extract_link_from_url(data.thumb_file_url) if data.thumb_file_url else (None, 0)
+    # )
+
+    extracted_thumb_url = (
+        create_thumbnail_url(data.thumb_file_url) if data.thumb_file_url else None
     )
 
     order.google_folder_url = (
@@ -458,9 +462,11 @@ def update_thumb_url(
     Authorize.jwt_required()
     order = check_if_order_exist(id, db)
 
-    extracted_thumb_url, extract_retry = (
-        extract_link_from_url(data.payload) if data.payload else (None, 0)
-    )
+    # extracted_thumb_url, extract_retry = (
+    #     extract_link_from_url(data.payload) if data.payload else (None, 0)
+    # )
+
+    extracted_thumb_url = create_thumbnail_url(data.payload) if data.payload else None
 
     order.google_file_url = data.payload if data.payload else order.google_file_url
     order.thumb_url = extracted_thumb_url
@@ -954,6 +960,37 @@ def check_if_user_exist(id, db: Session):
     return query
 
 
+def create_thumbnail_url(url):
+    """
+    Extracts the file ID from a Google Drive file URL and creates a new URL for the thumbnail.
+
+    Args:
+    url (str): The Google Drive file URL.
+
+    Returns:
+    str: The new URL for the thumbnail if the file ID is found, otherwise an empty string.
+    """
+    start_pattern = "https://drive.google.com/file/d/"
+    end_pattern = "/view"
+
+    start_index = url.find(start_pattern)
+    if start_index == -1:
+        print("create_thumbnail_url: failed to find startPattern")
+        return None
+
+    start_index += len(start_pattern)
+    end_index = url.find(end_pattern, start_index)
+    if end_index == -1:
+        print("create_thumbnail_url: failed to find end_pattern")
+        return None
+
+    file_id = url[start_index:end_index]
+    print(f"create_thumbnail_url: found gdrive id: {file_id}")
+    thumbnail_url = f"https://drive.google.com/thumbnail?id={file_id}"
+
+    return thumbnail_url
+
+
 def extract_link_from_url(url, max_retries=1, delay=0.2):
     retry_count = 0
     failed_response_data = None
@@ -970,8 +1007,8 @@ def extract_link_from_url(url, max_retries=1, delay=0.2):
 
         # Find the substring that contains the link
         start_patterns = [
-            "https://lh3.googleusercontent.com/drive-viewer/",
             "https://drive.google.com/drive-viewer/",
+            # "https://lh3.googleusercontent.com/drive-viewer/",
         ]
         end_pattern = "\\"
 
@@ -1028,8 +1065,6 @@ def find_thumb_url(response_text, start_patterns, end_pattern="\\"):
     end_index = response_text.find(end_pattern, start_index)
     if end_index == -1:
         return (-1, -1)
-
-    return start_index, end_index
 
     return start_index, end_index
 
