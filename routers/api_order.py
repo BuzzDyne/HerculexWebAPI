@@ -6,6 +6,7 @@ from fastapi_jwt_auth import AuthJWT
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import or_
 from datetime import datetime, timedelta
+import time
 
 from database import (
     get_db,
@@ -414,8 +415,8 @@ def update_order(
             detail=f"Request is conflicted. Please refresh page!",
         )
 
-    extracted_thumb_url = (
-        extract_link_from_url(data.thumb_file_url) if data.thumb_file_url else None
+    extracted_thumb_url, extract_retry = (
+        extract_link_from_url(data.thumb_file_url) if data.thumb_file_url else (None, 0)
     )
 
     order.google_folder_url = (
@@ -457,8 +458,12 @@ def update_thumb_url(
     Authorize.jwt_required()
     order = check_if_order_exist(id, db)
 
+    extracted_thumb_url, extract_retry = (
+        extract_link_from_url(data.payload) if data.payload else (None, 0)
+    )
+
     order.google_file_url = data.payload if data.payload else order.google_file_url
-    order.thumb_url = extract_link_from_url(data.payload) if data.payload else None
+    order.thumb_url = extracted_thumb_url
     order.last_updated_ts = datetime.now()
 
     db.commit()
@@ -949,29 +954,84 @@ def check_if_user_exist(id, db: Session):
     return query
 
 
-def extract_link_from_url(url):
-    # Send a GET request to the URL and get the content
-    response = r.get(url)
+def extract_link_from_url(url, max_retries=1, delay=0.2):
+    retry_count = 0
+    failed_response_data = None
 
-    # Check if the request was successful
-    if response.status_code != 200:
-        print(
-            f"Failed to retrieve content from {url}. Status code: {response.status_code}"
+    while retry_count < max_retries:
+        # Send a GET request to the URL and get the content
+        response = r.get(url)
+
+        # Check if the request was successful
+        if response.status_code != 200:
+            print(
+                f"Failed to retrieve content from ({url}). Status code: {response.status_code}"
+            )
+
+        # Find the substring that contains the link
+        start_patterns = [
+            "https://lh3.googleusercontent.com/drive-viewer/",
+            "https://drive.google.com/drive-viewer/",
+        ]
+        end_pattern = "\\"
+
+        start_index, end_index = find_thumb_url(
+            response.text, start_patterns, end_pattern
         )
-        return None
 
-    # Find the substring that contains the link
-    start_pattern = "https://lh3.googleusercontent.com/drive-viewer/"
-    end_pattern = "\\"
-    start_index = response.text.find(start_pattern)
-    end_index = response.text.find(end_pattern, start_index)
+        if start_index != -1 and end_index != -1:
+            extracted_link = response.text[start_index:end_index]
+            print(f"Last Failed Response Data: {failed_response_data}")
+            return extracted_link + "=s400", retry_count
+        else:
+            failed_response_data = response.text
+            retry_count += 1
+            time.sleep(delay)  # Delay between retries
+            print(f"Retrying... ({retry_count}/{max_retries})")
 
-    if start_index != -1 and end_index != -1:
-        extracted_link = response.text[start_index:end_index]
-        return extracted_link + "=s400"
-    else:
-        print("Link not found in the content.")
-        return None
+    print("Link not found in the content after maximum retries.")
+    print(failed_response_data)
+    return None, retry_count
+
+
+def find_thumb_url(response_text, start_patterns, end_pattern="\\"):
+    """
+    Finds the starting and ending indices of a substring within response_text
+    that starts with any of the provided start_patterns and ends with end_pattern.
+
+    Args:
+    response_text (str): The text to search within.
+    start_patterns (list of str): A list of starting patterns to search for.
+    end_pattern (str, optional): The ending pattern of the substring to find. Defaults to "\\".
+
+    Returns:
+    tuple: A tuple containing two integers:
+        - The index of the start of the substring (inclusive) or -1 if not found.
+        - The index of the end of the substring (exclusive) or -1 if not found.
+      Returns (-1, -1) if no valid start or end pattern is found.
+    """
+    start_index = -1
+    end_index = -1
+
+    # Find the first occurrence of any start_pattern
+    for pattern in start_patterns:
+        index = response_text.find(pattern)
+        if index != -1:
+            print(f"find_thumb_url: Pattern found using ({pattern})")
+            start_index = index
+            break
+
+    if start_index == -1:
+        return (-1, -1)
+
+    # Find the end_pattern after the first found start_pattern
+    end_index = response_text.find(end_pattern, start_index)
+    if end_index == -1:
+        return (-1, -1)
+
+    return start_index, end_index
+
+    return start_index, end_index
 
 
 def get_user_name(db, user_id):
