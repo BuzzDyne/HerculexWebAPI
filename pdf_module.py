@@ -352,7 +352,10 @@ def convert_to_terbilang(number):
 
         # Handle digit in tens and ones place
         if num >= 10:
-            if num < 20:
+            if num == 10:
+                result += "SEPULUH "
+                num = 0
+            elif num < 20:
                 result += belasan[num - 10] + " "
                 num = 0  # Set num to 0 to avoid processing the ones place
             else:
